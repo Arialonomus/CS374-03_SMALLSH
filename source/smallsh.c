@@ -9,35 +9,43 @@
 
 int main(int argc, char *argv[])
 {
+    /* Select mode based on passed-in arguments */
+    // DEFAULT: Interactive Mode
     FILE* input = stdin;
-    char* input_fn = "(stdin)";
-    if (argc == 2) {
-        input_fn = argv[1];
-        input = fopen(input_fn, "re");
-        if (!input) err(1, "%s", input_fn);
-    } else if (argc > 2) {
-        errx(1, "too many arguments");
+    char* inputFileName = "(stdin)";
+    // Non-Interactive Mode
+    if (argc == 2)
+    {
+        inputFileName = argv[1];
+        input = fopen(inputFileName, "re");
+        if (!input) err(1, "%s", inputFileName);
     }
+    else if (argc > 2) { errx(1, "too many arguments"); }
 
-    char* line = NULL;
-    size_t n = 0;
+    /* Main Program Loop */
+    char* line = NULL;      // Holds a line read from input
+    size_t n = 0;           // Holds number of characters in line
+
     for (;;) {
-//prompt:;
         /* TODO: Manage background processes */
 
         /* TODO: prompt */
         if (input == stdin) {
 
         }
-        ssize_t line_len = getline(&line, &n, input);
-        if (line_len < 0) err(1, "%s", input_fn);
 
-        size_t nwords = wordsplit(line);
-        for (size_t i = 0; i < nwords; ++i) {
+        /* Read a line from input */
+        ssize_t lineLength = getline(&line, &n, input);
+        if (lineLength < 0) err(1, "%s", inputFileName);
+
+        /* Tokenize input line and expand parameters */
+        size_t numWords = wordsplit(line);
+        for (size_t i = 0; i < numWords; ++i)
+        {
             fprintf(stderr, "Word %zu: %s\n", i, words[i]);
-            char *exp_word = expand(words[i]);
+            char* expandedWord = expand(words[i]);
             free(words[i]);
-            words[i] = exp_word;
+            words[i] = expandedWord;
             fprintf(stderr, "Expanded Word %zu: %s\n", i, words[i]);
         }
     }
