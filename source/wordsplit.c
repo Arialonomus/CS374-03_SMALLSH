@@ -1,6 +1,6 @@
 #include "wordsplit.h"
 
-size_t wordsplit(char const *line) {
+size_t wordsplit(char const* line, char** words) {
     size_t wlen = 0;
     size_t wind = 0;
 

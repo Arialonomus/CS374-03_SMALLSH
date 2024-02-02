@@ -23,6 +23,7 @@ int main(int argc, char *argv[])
     else if (argc > 2) { errx(1, "too many arguments"); }
 
     /* Main Program Loop */
+    char* words[MAX_WORDS]; // A program-level array of words representing tokenized arguments
     char* line = NULL;      // Holds a line read from input
     size_t n = 0;           // Holds number of characters in line
 
@@ -39,7 +40,7 @@ int main(int argc, char *argv[])
         if (lineLength < 0) err(1, "%s", inputFileName);
 
         /* Tokenize input line and expand parameters */
-        size_t numWords = wordsplit(line);
+        size_t numWords = wordsplit(line, words);
         for (size_t i = 0; i < numWords; ++i)
         {
             fprintf(stderr, "Word %zu: %s\n", i, words[i]);
