@@ -27,12 +27,16 @@ int main(int argc, char *argv[])
     char* line = NULL;      // Holds a line read from input
     size_t n = 0;           // Holds number of characters in line
 
-    for (;;) {
+    for (;;)
+    {
         /* TODO: Manage background processes */
 
-        /* TODO: prompt */
-        if (input == stdin) {
-
+        /* Expand and print interactive mode prompt */
+        if (input == stdin)
+        {
+            char* promptStr = getenv("PS1");
+            if (!promptStr) promptStr = "$";
+            fprintf(stderr, "%s", expand(promptStr));
         }
 
         /* Read a line from input */
