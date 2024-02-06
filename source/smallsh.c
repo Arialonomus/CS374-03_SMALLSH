@@ -23,9 +23,9 @@ int main(int argc, char *argv[])
     else if (argc > 2) { errx(1, "too many arguments"); }
 
     /* Main Program Loop */
-    char* words[MAX_WORDS]; // A program-level array of words representing tokenized arguments
-    char* line = NULL;      // Holds a line read from input
-    size_t n = 0;           // Holds number of characters in line
+    char* words[MAX_WORDS] = {NULL};    // A program-level array of words representing tokenized arguments
+    char* line = NULL;                  // Holds a line read from input
+    size_t n = 0;                       // Holds the number of characters in line
 
     for (;;)
     {

@@ -7,20 +7,19 @@
  * Skeleton code provided by OSU Instructor
  */
 
+/*
+ * Variables
+ */
+#ifndef MAX_WORDS
+#define MAX_WORDS 512
+#endif
+
 #ifndef SMALLSH_WORDSPLIT_H
 #define SMALLSH_WORDSPLIT_H
 
 #include <stdlib.h>
 #include <err.h>
 #include <ctype.h>
-
-/*
- * Variables
- */
-
-#ifndef MAX_WORDS
-#define MAX_WORDS 512
-#endif
 
 /* Splits a string into words delimited by whitespace. Recognizes
  * comments as '#' at the beginning of a word, and backslash escapes.
