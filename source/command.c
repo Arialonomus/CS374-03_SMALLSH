@@ -18,16 +18,13 @@ struct Command parseCommand(char** tokens, size_t numTokens)
     for (int i = 1; i < numTokens - 1; ++i)
     {
         /* Check for redirection */
-        enum RD_FLAG rdType = NONE;
-        if (strcmp(tokens[i], "<") == 0) rdType = RD_IN;
-        else if (strcmp(tokens[i], ">") == 0)  rdType = RD_OUT;
-        else if (strcmp(tokens[i], ">>") == 0) rdType = RD_APPEND;
+        const enum RD_FLAG rd_t = checkRedirect(tokens[i]);
 
         /* Handle redirection */
-        if (rdType != NONE) ++i;            // Skip the redirection operator
-        if (i >= numTokens) return cmd;     // Return if operator is the last token
+        if (rd_t != NONE) ++i;          // Skip the redirection operator
+        if (i >= numTokens) return cmd; // Return if operator is the last token
         if (cmd.cmd_t == EXTERNAL) {
-            switch (rdType) {
+            switch (rd_t) {
                 case RD_IN:
                     cmd.inputFile = tokens[i];
                     break;
@@ -61,4 +58,14 @@ struct Command parseCommand(char** tokens, size_t numTokens)
 
     /* Cleanup & Exit */
     return cmd;
+}
+
+enum RD_FLAG checkRedirect(const char* token)
+{
+    enum RD_FLAG rd_t = NONE;
+    if (strcmp(token, "<") == 0) rd_t = RD_IN;
+    else if (strcmp(token, ">") == 0)  rd_t = RD_OUT;
+    else if (strcmp(token, ">>") == 0) rd_t = RD_APPEND;
+
+    return rd_t;
 }

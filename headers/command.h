@@ -46,4 +46,7 @@ struct Command
 /* Parses an array of tokenized strings and returns a Command struct */
 struct Command parseCommand(char** tokens, size_t numTokens);
 
+/* Checks if a token is a redirect operator. If so, returns the operator type */
+enum RD_FLAG checkRedirect(char* token);
+
 #endif //SMALLSH_COMMAND_H
