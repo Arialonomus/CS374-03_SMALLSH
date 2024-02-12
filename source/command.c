@@ -3,27 +3,33 @@
 struct Command parseCommand(char** tokens, size_t numTokens)
 {
     /* Initialize command struct */
-    struct Command cmd = {};
-    cmd.argc = 0;
-    cmd.argv = malloc(sizeof(char*) * (numTokens + 1));
+    struct Command cmd = {
+        EXTERNAL,
+        NULL,
+        malloc(sizeof(char*) * (numTokens + 1)),
+        0,
+        NULL,
+        NULL,
+        false,
+        false
+        };
     if(!cmd.argv) err(1, "malloc");
 
-    /* Get command name and check for built-in commands */
-    cmd.command = tokens[0];
-    if (strcmp(cmd.command, "cd") == 0) cmd.cmd_t = CD;
-    else if (strcmp(cmd.command, "exit") == 0) cmd.cmd_t = EXIT;
-    else cmd.cmd_t = EXTERNAL;
+    /* Check if last token is "&" for background process indicatior */
+    int numToParse = numTokens;
+    if (strcmp(tokens[numToParse - 1], "&") == 0) {
+        cmd.background = true;
+        --numToParse;
+    }
 
     /* Iterate through tokens to parse command arguments */
-    for (int i = 1; i < numTokens - 1; ++i)
+    for (int i = 0; i < numToParse; ++i)
     {
-        /* Check for redirection */
-        const enum RD_FLAG rd_t = checkRedirect(tokens[i]);
-
         /* Handle redirection */
-        if (rd_t != NONE) ++i;          // Skip the redirection operator
-        if (i >= numTokens) return cmd; // Return if operator is the last token
-        if (cmd.cmd_t == EXTERNAL) {
+        const enum RD_FLAG rd_t = checkRedirect(tokens[i]);
+        if (rd_t != NONE && cmd.cmd_t == EXTERNAL) {
+            ++i;                            // Skip the redirection operator
+            if (i >= numTokens) return cmd; // Return if operator is the last token
             switch (rd_t) {
                 case RD_IN:
                     cmd.inputFile = tokens[i];
@@ -40,20 +46,17 @@ struct Command parseCommand(char** tokens, size_t numTokens)
                     break;
             }
         }
+        /* Assign command name and check for built-in commands */
+        else if (cmd.name == NULL) {
+            cmd.name = tokens[i];
+            if (strcmp(cmd.name, "cd") == 0) cmd.cmd_t = CD;
+            else if (strcmp(cmd.name, "exit") == 0) cmd.cmd_t = EXIT;
+        }
         /* Add token to argument list */
         else {
             cmd.argv[cmd.argc] = tokens[i];
             ++cmd.argc;
         }
-    }
-
-    /* Check if last token is "&" for background process indicatior */
-    if (strcmp(tokens[numTokens - 1], "&")) {
-        cmd.background = true;
-    }
-    else {
-        cmd.argv[cmd.argc] = tokens[numTokens - 1];
-        ++cmd.argc;
     }
 
     /* Cleanup & Exit */
