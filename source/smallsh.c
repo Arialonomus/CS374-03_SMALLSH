@@ -6,8 +6,9 @@
 #include <string.h>
 #include "wordsplit.h"
 #include "expand.h"
+#include "command.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     /* Select mode based on passed-in arguments */
     // DEFAULT: Interactive Mode
@@ -40,18 +41,34 @@ int main(int argc, char *argv[])
         }
 
         /* Read a line from input */
-        ssize_t lineLength = getline(&line, &n, input);
+        ssize_t const lineLength = getline(&line, &n, input);
         if (lineLength < 0) err(1, "%s", inputFileName);
 
         /* Tokenize input line and expand parameters */
-        size_t numWords = wordsplit(line, words);
+        size_t const numWords = wordsplit(line, words);
         for (size_t i = 0; i < numWords; ++i)
         {
-            fprintf(stderr, "Word %zu: %s\n", i, words[i]);
             char* expandedWord = expand(words[i]);
             free(words[i]);
             words[i] = expandedWord;
-            fprintf(stderr, "Expanded Word %zu: %s\n", i, words[i]);
         }
+
+        /* Parse and execute command */
+        struct Command const cmd = parseCommand(words, numWords);
+        switch(cmd.flag) {
+            case CD:
+                printf("Command: CD");
+                break;
+            case EXIT:
+                printf("Command: EXIT");
+                break;
+            default:
+                printf("Command: External");
+                break;
+        }
+
+        /* Prepare for next loop */
+        if (putchar('\n') == EOF) err(1, "putchar");
+        free(cmd.argv);
     }
 }
