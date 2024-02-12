@@ -10,9 +10,9 @@ struct Command parseCommand(char** tokens, size_t numTokens)
 
     /* Get command name and check for built-in commands */
     cmd.command = tokens[0];
-    if (strcmp(cmd.command, "cd") == 0) cmd.flag = CD;
-    else if (strcmp(cmd.command, "exit") == 0) cmd.flag = EXIT;
-    else cmd.flag = EXTERNAL;
+    if (strcmp(cmd.command, "cd") == 0) cmd.cmd_t = CD;
+    else if (strcmp(cmd.command, "exit") == 0) cmd.cmd_t = EXIT;
+    else cmd.cmd_t = EXTERNAL;
 
     /* Iterate through tokens to parse command arguments */
     for (int i = 1; i < numTokens - 1; ++i)
@@ -24,9 +24,9 @@ struct Command parseCommand(char** tokens, size_t numTokens)
         else if (strcmp(tokens[i], ">>") == 0) rdType = RD_APPEND;
 
         /* Handle redirection */
-        if (rdType != NONE) {
-            ++i;                            // Get the next token for the redirect path
-            if(i >= numTokens) return cmd;  // Exit the loop since this is the last token
+        if (rdType != NONE) ++i;            // Skip the redirection operator
+        if (i >= numTokens) return cmd;     // Return if operator is the last token
+        if (cmd.cmd_t == EXTERNAL) {
             switch (rdType) {
                 case RD_IN:
                     cmd.inputFile = tokens[i];

@@ -14,13 +14,14 @@
 #include <err.h>
 
 /* Flags for determining execution for pre-build commands */
-enum CommandFlag
+enum CommandType
 {
     CD,
     EXIT,
     EXTERNAL
 };
 
+/* Flags for determining redirection type */
 enum RD_FLAG
 {
     NONE,
@@ -32,7 +33,7 @@ enum RD_FLAG
 /* Holds data about a command to be executed */
 struct Command
 {
-    enum CommandFlag flag;  // Tells program whether command is a built-in or external
+    enum CommandType cmd_t; // Flags the type of the command
     char* command;          // The name of the command to execute
     char** argv;            // The list of arguments
     size_t argc;            // Argument count
