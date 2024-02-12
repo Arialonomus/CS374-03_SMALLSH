@@ -34,7 +34,7 @@ enum RD_FLAG
 struct Command
 {
     enum CommandType cmd_t; // Flags the type of the command
-    char* command;          // The name of the command to execute
+    char* name;             // The name of the command to execute
     char** argv;            // The list of arguments
     size_t argc;            // Argument count
     char* inputFile;        // Input file for redirection
@@ -47,6 +47,6 @@ struct Command
 struct Command parseCommand(char** tokens, size_t numTokens);
 
 /* Checks if a token is a redirect operator. If so, returns the operator type */
-enum RD_FLAG checkRedirect(char* token);
+enum RD_FLAG checkRedirect(const char* token);
 
 #endif //SMALLSH_COMMAND_H
