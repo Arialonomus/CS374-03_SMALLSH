@@ -46,6 +46,7 @@ int main(int argc, char* argv[])
 
         /* Tokenize input line and expand parameters */
         size_t const numWords = wordsplit(line, words);
+        if (numWords < 1) continue;     // Skip processing for empty commands
         for (size_t i = 0; i < numWords; ++i)
         {
             char* expandedWord = expand(words[i]);
@@ -55,14 +56,14 @@ int main(int argc, char* argv[])
 
         /* Parse and execute command */
         struct Command const cmd = parseCommand(words, numWords);
-        switch(cmd.flag) {
+        switch(cmd.cmd_t) {
             case CD:
                 printf("Command: CD");
                 break;
             case EXIT:
                 printf("Command: EXIT");
                 break;
-            default:
+            case EXTERNAL:
                 printf("Command: External");
                 break;
         }
@@ -70,5 +71,6 @@ int main(int argc, char* argv[])
         /* Prepare for next loop */
         if (putchar('\n') == EOF) err(1, "putchar");
         free(cmd.argv);
+        fflush(stdout);
     }
 }
