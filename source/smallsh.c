@@ -81,40 +81,12 @@ int main(int argc, char* argv[])
         switch(cmd.cmd_t) {
             /* Built-In Command: cd */
             case CD:
-                if (cmd.argc > 1) {
-                    errno = E2BIG;
-                    warn("cd");
-                    break;
-                }
-                if (cmd.argc == 0) {
-                    cmd.argv[0] = getenv("HOME");
-                }
-                if(chdir(cmd.argv[0]) != 0) warn("chdir");
+                cmd_cd(cmd.argv, cmd.argc);
                 break;
             /* Built-In Command: exit */
             case EXIT:
-                // Validate command args
-                if (cmd.argc > 1) {
-                    errno = E2BIG;
-                    warn("exit");
-                    break;
-                }
-                if (cmd.argc == 0) {
-                    cmd.argv[0] = expand("$?");
-                }
-                // Convert argument to status int
-                errno = 0;
-                char* end = NULL;
-                long status = strtol(cmd.argv[0], &end, 10);
-                if(strcmp(cmd.argv[0],end) == 0 || status > 255 || status < 0) {
-                    warnx("exit: Invalid argument\n");
-                    break;
-                }
-                if(errno != 0) {
-                    warn("exit");
-                    break;
-                }
-                exit(status);
+                cmd_exit(cmd.argv, cmd.argc);
+                break;
             /* External Commands */
             case EXTERNAL:
                 printf("Command: External");
