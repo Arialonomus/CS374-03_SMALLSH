@@ -2,16 +2,11 @@
 #define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
-#include <err.h>
 #include <errno.h>
-#include <string.h>
-#include <unistd.h>
 #include <signal.h>
 
 #include "wordsplit.h"
-#include "expand.h"
 #include "command.h"
-#include "handlers.h"
 
 int main(int argc, char* argv[])
 {
@@ -19,14 +14,13 @@ int main(int argc, char* argv[])
     // DEFAULT: Interactive Mode
     FILE* input = stdin;
     char* inputFileName = "(stdin)";
+    struct sigaction* dispositions[NUM_IGNORED] = {};
     if(argc < 2) {
-        struct sigaction olddisp_SIGINT;
-        if(sigaction(SIGINT, NULL, &olddisp_SIGINT) == -1) err(1, "sigaction(olddisp_SIGINT)");
-        if(signal(SIGINT, SIG_IGN) == SIG_ERR) err(1, "signal(SIGINT)");
-
-        struct sigaction olddisp_SIGTSTP;
-        if(sigaction(SIGINT, NULL, &olddisp_SIGTSTP) == -1) err(1, "sigaction(olddisp_SIGTSTP)");
-        if(signal(SIGTSTP, SIG_IGN) == SIG_ERR) err(1, "signal(SIGTSTP)");
+        for (int i = 0; i < NUM_IGNORED; ++i) {
+            if(sigaction(IGNORED[i], NULL, dispositions[i]) == -1)
+                err(1, "sigaction(): store old disposition for %d", IGNORED[i]);
+            if(signal(IGNORED[i], SIG_IGN) == SIG_ERR) err(1, "signal(%d)", IGNORED[i]);
+        }
     }
     // Non-Interactive Mode
     else if (argc == 2) {
@@ -95,7 +89,26 @@ int main(int argc, char* argv[])
                 break;
             /* External Commands */
             case EXTERNAL:
-                cmd_external(cmd);
+                pid_t child_pid;
+                switch(child_pid = fork()) {
+                    // Error
+                    case -1:
+                        warn("fork");
+                    break;
+                    // Child Process
+                    case 0:
+                        /* Reset signal dispositions */
+                        for (int i = 0; i < NUM_IGNORED; ++i) {
+                            if(sigaction(IGNORED[i], dispositions[i], NULL) == -1)
+                                err(1, "sigaction(): restore disposition for %d", IGNORED[i]);
+                        }
+
+                    execute(cmd);
+                    break;
+                    // Parent Process
+                    default:
+                        break;
+                }
                 break;
             default:
                 break;

@@ -8,15 +8,13 @@
 #define SMALLSH_COMMAND_H
 
 #include <stdbool.h>
-#include <stddef.h>
-#include <string.h>
 #include <stdlib.h>
-#include <err.h>
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
-
+#include <signal.h>
 #include "expand.h"
+#include "handlers.h"
 
 /* Flags for determining execution for pre-build commands */
 enum CommandType
@@ -59,9 +57,6 @@ void cmd_cd (char** argv, const int argc);
 
 /* Built-In Command "exit": safely exits smallsh */
 void cmd_exit(char** argv, const int argc);
-
-/* Creates a child process to execute an external command */
-void cmd_external(struct Command cmd);
 
 /* Executes a program based on a passed-in command */
 void execute(struct Command cmd);

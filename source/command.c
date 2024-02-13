@@ -1,7 +1,5 @@
 #include "command.h"
 
-#include <stdio.h>
-
 struct Command parseCommand(char** tokens, size_t numTokens)
 {
     /* Initialize command struct */
@@ -115,17 +113,17 @@ void cmd_exit(char** argv, const int argc)
     _exit(status);
 }
 
-void cmd_external(struct Command cmd)
+void execute(struct Command cmd)
 {
-    pid_t child_pid;
-    switch(child_pid = fork()) {
-        case -1:
-            warn("fork");
-            return;
-        case 0:
-            execute(cmd);
-            break;
-        default:
-            break;
+    /* Handle redirection */
+    if(cmd.inputFile) {
+        int input_fd = open(cmd.inputFile, O_RDONLY );
+        if (input_fd == -1) err(1, "open: %s", cmd.inputFile);
+        if (dup2(input_fd, STDIN_FILENO) == -1) err(1, "source dup2()");
+    }
+    if(cmd.outputFile) {
+        int output_fd = open(cmd.outputFile, cmd.append ? O_WRONLY | O_APPEND : O_WRONLY, 0777);
+        if (output_fd == -1) err(1, "open: %s", cmd.outputFile);
+        if (dup2(output_fd, STDOUT_FILENO) == -1) err(1, "target dup2()");
     }
 }
