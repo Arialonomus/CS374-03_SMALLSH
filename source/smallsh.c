@@ -1,23 +1,29 @@
+#ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
+#endif
+
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
+
+#include <environment.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <stdint.h>
 
 #include "wordsplit.h"
 #include "command.h"
 
 int main(int argc, char* argv[])
 {
-    /* Pre-expand environment variable handles and set default values */
-    char* env_exitstatus = expand("$?");
-    if(setenv(env_exitstatus, "0", 1) == -1)
-        err(1, "setenv(): %s", env_exitstatus);
-    char* env_bgpid = expand("$!");
-    if(setenv(env_bgpid, "", 1) == -1)
-        err(1, "setenv(): %s", env_exitstatus);
+    /* Set default environment values */
+    if(setenv(expand("$?"), "0", 1) == -1)
+        err(1, "setenv(): %s", expand("$?"));
+    if(setenv(expand("$!"), "", 1) == -1)
+        err(1, "setenv(): %s", expand("$!"));
 
     /* Select mode based on passed-in arguments */
     // DEFAULT: Interactive Mode
@@ -46,7 +52,8 @@ int main(int argc, char* argv[])
     size_t n = 0;                       // Holds the number of characters in line
 
     for (;;) {
-        /* TODO: Manage background processes */
+        /* Manage background processes */
+
 
         /* Interactive mode housekeeping */
         if (input == stdin) {
@@ -66,7 +73,8 @@ int main(int argc, char* argv[])
         /* Read a line from input */
         ssize_t const lineLength = getline(&line, &n, input);
         if (lineLength < 0) err(1, "%s", inputFileName);
-        // Handle read errors in interactive mode
+
+        /* Handle read errors in interactive mode */
         if (input == stdin) {
             if (errno == EINTR) {
                 clearerr(input);
@@ -99,62 +107,7 @@ int main(int argc, char* argv[])
                 break;
             /* External Commands */
             case EXTERNAL:
-                pid_t child_pid;
-                switch(child_pid = fork()) {
-                    // Error
-                    case -1:
-                        warn("fork");
-                        break;
-                    // Child Process
-                    case 0:
-                        /* Reset signal dispositions */
-                        for (int i = 0; i < NUM_IGNORED; ++i) {
-                            if(sigaction(IGNORED[i], dispositions[i], NULL) == -1)
-                                err(1, "sigaction(): restore disposition for %d", IGNORED[i]);
-                        }
-                        /* Execute external command */
-                        execute(cmd);
-                        break;
-                    // Parent Process
-                    default:
-                        if (!cmd.background) {
-                            int status;
-                            if(waitpid(child_pid, &status, 0) == -1)
-                                err(1, "waitpid(): %d", child_pid);
-                            if (WIFEXITED(status)) {
-                                char* exitstatus_str = NULL;
-                                asprintf(&exitstatus_str, "%d", WEXITSTATUS(status));
-                                if(setenv(env_exitstatus, exitstatus_str, 1) == -1)
-                                    err(1, "setenv(): %s", env_exitstatus);
-                                free(exitstatus_str);
-                            }
-                            else if (WIFSIGNALED(status)) {
-                                int termSig = WTERMSIG(status) + 128;
-                                char* exitstatus_str = NULL;
-                                asprintf(&exitstatus_str, "%d", termSig);
-                                if(setenv(env_exitstatus, exitstatus_str, 1) == -1)
-                                    err(1, "setenv(): %s", env_exitstatus);
-                                free(exitstatus_str);
-                            }
-                            else if (WIFSTOPPED(status)) {
-                                kill(child_pid, SIGCONT);
-                                fprintf(stderr, "Child process %d stopped. Continuing.\n", child_pid);
-                                char* bgpid_str = NULL;
-                                asprintf(&bgpid_str, "%d", child_pid);
-                                if(setenv(env_bgpid, bgpid_str, 1) == -1)
-                                    err(1, "setenv(): %s", bgpid_str);
-                                free(bgpid_str);
-                            }
-                        }
-                        else {
-                            char* bgpid_str = NULL;
-                            asprintf(&bgpid_str, "%d", child_pid);
-                            if(setenv(env_bgpid, bgpid_str, 1) == -1)
-                                err(1, "setenv(): %s", bgpid_str);
-                            free(bgpid_str);
-                        }
-                        break;
-                }
+                cmd_external(cmd, dispositions);
                 break;
             default:
                 break;

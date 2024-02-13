@@ -7,14 +7,19 @@
 #ifndef SMALLSH_COMMAND_H
 #define SMALLSH_COMMAND_H
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <stdbool.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <signal.h>
-#include "expand.h"
+#include <sys/wait.h>
 #include "handlers.h"
+#include "environment.h"
 
 /* Flags for determining execution for pre-build commands */
 enum CommandType
@@ -57,6 +62,9 @@ void cmd_cd (char** argv, const int argc);
 
 /* Built-In Command "exit": safely exits smallsh */
 void cmd_exit(char** argv, const int argc);
+
+/* Handles process forking for external commands */
+void cmd_external(struct Command cmd, struct sigaction* dispositions[]);
 
 /* Executes a program based on a passed-in command */
 void execute(struct Command cmd);

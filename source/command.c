@@ -114,6 +114,50 @@ void cmd_exit(char** argv, const int argc)
     _exit(status);
 }
 
+void cmd_external(struct Command cmd, struct sigaction* dispositions[])
+{
+    pid_t child_pid;
+    switch(child_pid = fork()) {
+        /* Error */
+        case -1:
+            warn("fork");
+            break;
+        /* Child Process */
+        case 0:
+            /* Reset signal dispositions */
+            for (int i = 0; i < NUM_IGNORED; ++i) {
+                if(sigaction(IGNORED[i], dispositions[i], NULL) == -1)
+                    err(1, "sigaction(): restore disposition for %d", IGNORED[i]);
+            }
+            /* Execute external command */
+            execute(cmd);
+            break;
+        /* Parent Process */
+        default:
+            if (!cmd.background) {
+                int status;
+                if(waitpid(child_pid, &status, 0) == -1)
+                    err(1, "waitpid(): %jd", (intmax_t)child_pid);
+                if (WIFEXITED(status)) {
+                    if (set_exitstatus(WEXITSTATUS(status)) == -1) err(1, "set_exitstatus()");
+                }
+                else if (WIFSIGNALED(status)) {
+                    int termSig = WTERMSIG(status) + 128;
+                    if (set_exitstatus(termSig) == -1) err(1, "set_exitstatus()");
+                }
+                else if (WIFSTOPPED(status)) {
+                    kill(child_pid, SIGCONT);
+                    fprintf(stderr, "Child process %jd stopped. Continuing.\n", (intmax_t)child_pid);
+                    if (set_bgpid(child_pid) == -1) err(1, "set_bgpid()");
+                }
+            }
+            else {
+                if (set_bgpid(child_pid) == -1) err(1, "set_bgpid()");
+            }
+            break;
+    }
+}
+
 void execute(struct Command cmd)
 {
     /* Handle redirection */
