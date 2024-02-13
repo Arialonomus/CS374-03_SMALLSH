@@ -8,6 +8,6 @@
 
 typedef void (*sighandler_t)(int);
 
-inline void sigint_handler(int sig) {}
+void sigint_handler(int sig);
 
 #endif //SMALLSH_HANDLERS_H
