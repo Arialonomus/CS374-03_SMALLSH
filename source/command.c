@@ -72,3 +72,43 @@ enum RD_FLAG checkRedirect(const char* token)
 
     return rd_t;
 }
+
+void cmd_cd (char** argv, const int argc)
+{
+    if (argc > 1) {
+        errno = E2BIG;
+        warn("cd");
+        return;
+    }
+    if (argc == 0) {
+        argv[0] = getenv("HOME");
+    }
+    if(chdir(argv[0]) != 0) warn("chdir");
+}
+
+void cmd_exit(char** argv, const int argc)
+{
+    /* Validate command args */
+    if (argc > 1) {
+        errno = E2BIG;
+        warn("exit");
+        return;
+    }
+    if (argc == 0) {
+        argv[0] = expand("$?");
+    }
+
+    /* Convert argument to status int */
+    errno = 0;
+    char* end = NULL;
+    const long status = strtol(argv[0], &end, 10);
+    if(strcmp(argv[0], end) == 0 || status > 255 || status < 0) {
+        warnx("exit: Invalid argument");
+        return;
+    }
+    if(errno != 0) {
+        warn("exit");
+        return;
+    }
+    _exit(status);
+}

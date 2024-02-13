@@ -12,6 +12,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <err.h>
+#include <errno.h>
+#include <unistd.h>
+
+#include "expand.h"
 
 /* Flags for determining execution for pre-build commands */
 enum CommandType
@@ -48,5 +52,11 @@ struct Command parseCommand(char** tokens, size_t numTokens);
 
 /* Checks if a token is a redirect operator. If so, returns the operator type */
 enum RD_FLAG checkRedirect(const char* token);
+
+/* Built-In Command "cd": changes the working directory of smallsh */
+void cmd_cd (char** argv, const int argc);
+
+/* Built-In Command "exit": safely exits smallsh */
+void cmd_exit(char** argv, const int argc);
 
 #endif //SMALLSH_COMMAND_H
