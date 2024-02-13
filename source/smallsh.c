@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
                 break;
             /* External Commands */
             case EXTERNAL:
-                printf("Command: External");
+                cmd_external(cmd);
                 break;
             default:
                 break;
