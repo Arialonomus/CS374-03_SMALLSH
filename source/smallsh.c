@@ -6,19 +6,25 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
+
 #include "wordsplit.h"
 #include "expand.h"
 #include "command.h"
+#include "handlers.h"
 
-int main(int argc, char* argv[], char* envp[])
+int main(int argc, char* argv[])
 {
     /* Select mode based on passed-in arguments */
     // DEFAULT: Interactive Mode
     FILE* input = stdin;
     char* inputFileName = "(stdin)";
+    if(argc < 2) {
+        signal(SIGTSTP, SIG_IGN);
+        signal(SIGINT, SIG_IGN);
+    }
     // Non-Interactive Mode
-    if (argc == 2)
-    {
+    else if (argc == 2) {
         inputFileName = argv[1];
         input = fopen(inputFileName, "re");
         if (!input) err(1, "%s", inputFileName);
@@ -30,20 +36,35 @@ int main(int argc, char* argv[], char* envp[])
     char* line = NULL;                  // Holds a line read from input
     size_t n = 0;                       // Holds the number of characters in line
 
-    for (;;)
-    {
+    for (;;) {
         /* TODO: Manage background processes */
 
-        /* Expand and print interactive mode prompt */
+        /* Interactive mode housekeeping */
         if (input == stdin) {
+            /* Expand and print prompt string */
             char* promptStr = getenv("PS1");
             if (!promptStr) promptStr = "$";
             fprintf(stderr, "%s", expand(promptStr));
+
+            /* Change SIGINT disposition for line read */
+            struct sigaction act = {0};
+            act.sa_handler = sigint_handler;
+            if (sigfillset(&act.sa_mask) != 0) err(1, "sigfillset");
+            act.sa_flags = 0;
+            if(sigaction(SIGINT, &act, NULL) != 0) err(1, "sigaction");
         }
 
         /* Read a line from input */
         ssize_t const lineLength = getline(&line, &n, input);
         if (lineLength < 0) err(1, "%s", inputFileName);
+        // Handle read errors in interactive mode
+        if (input == stdin) {
+            if (errno == EINTR) {
+                clearerr(input);
+                continue;
+            }
+            signal(SIGINT, SIG_IGN);
+        }
 
         /* Tokenize input line and expand parameters */
         size_t const numWords = wordsplit(line, words);
