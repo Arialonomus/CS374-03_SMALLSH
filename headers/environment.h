@@ -7,7 +7,10 @@
 #ifndef SMALLSH_ENVIRONMENT_H
 #define SMALLSH_ENVIRONMENT_H
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
+
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
