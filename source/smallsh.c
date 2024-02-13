@@ -4,22 +4,32 @@
 #include <stdio.h>
 #include <errno.h>
 #include <signal.h>
+#include <sys/wait.h>
 
 #include "wordsplit.h"
 #include "command.h"
 
 int main(int argc, char* argv[])
 {
+    /* Pre-expand environment variable handles and set default values */
+    char* env_exitstatus = expand("$?");
+    if(setenv(env_exitstatus, "0", 1) == -1)
+        err(1, "setenv(): %s", env_exitstatus);
+    char* env_bgpid = expand("$!");
+    if(setenv(env_bgpid, "", 1) == -1)
+        err(1, "setenv(): %s", env_exitstatus);
+
     /* Select mode based on passed-in arguments */
     // DEFAULT: Interactive Mode
     FILE* input = stdin;
     char* inputFileName = "(stdin)";
-    struct sigaction* dispositions[NUM_IGNORED] = {};
+    struct sigaction* dispositions[NUM_IGNORED] = {NULL};
     if(argc < 2) {
         for (int i = 0; i < NUM_IGNORED; ++i) {
             if(sigaction(IGNORED[i], NULL, dispositions[i]) == -1)
                 err(1, "sigaction(): store old disposition for %d", IGNORED[i]);
-            if(signal(IGNORED[i], SIG_IGN) == SIG_ERR) err(1, "signal(%d)", IGNORED[i]);
+            if(signal(IGNORED[i], SIG_IGN) == SIG_ERR)
+                err(1, "signal(%d)", IGNORED[i]);
         }
     }
     // Non-Interactive Mode
@@ -94,7 +104,7 @@ int main(int argc, char* argv[])
                     // Error
                     case -1:
                         warn("fork");
-                    break;
+                        break;
                     // Child Process
                     case 0:
                         /* Reset signal dispositions */
@@ -102,11 +112,47 @@ int main(int argc, char* argv[])
                             if(sigaction(IGNORED[i], dispositions[i], NULL) == -1)
                                 err(1, "sigaction(): restore disposition for %d", IGNORED[i]);
                         }
-
-                    execute(cmd);
-                    break;
+                        /* Execute external command */
+                        execute(cmd);
+                        break;
                     // Parent Process
                     default:
+                        if (!cmd.background) {
+                            int status;
+                            if(waitpid(child_pid, &status, 0) == -1)
+                                err(1, "waitpid(): %d", child_pid);
+                            if (WIFEXITED(status)) {
+                                char* exitstatus_str = NULL;
+                                asprintf(&exitstatus_str, "%d", WEXITSTATUS(status));
+                                if(setenv(env_exitstatus, exitstatus_str, 1) == -1)
+                                    err(1, "setenv(): %s", env_exitstatus);
+                                free(exitstatus_str);
+                            }
+                            else if (WIFSIGNALED(status)) {
+                                int termSig = WTERMSIG(status) + 128;
+                                char* exitstatus_str = NULL;
+                                asprintf(&exitstatus_str, "%d", termSig);
+                                if(setenv(env_exitstatus, exitstatus_str, 1) == -1)
+                                    err(1, "setenv(): %s", env_exitstatus);
+                                free(exitstatus_str);
+                            }
+                            else if (WIFSTOPPED(status)) {
+                                kill(child_pid, SIGCONT);
+                                fprintf(stderr, "Child process %d stopped. Continuing.\n", child_pid);
+                                char* bgpid_str = NULL;
+                                asprintf(&bgpid_str, "%d", child_pid);
+                                if(setenv(env_bgpid, bgpid_str, 1) == -1)
+                                    err(1, "setenv(): %s", bgpid_str);
+                                free(bgpid_str);
+                            }
+                        }
+                        else {
+                            char* bgpid_str = NULL;
+                            asprintf(&bgpid_str, "%d", child_pid);
+                            if(setenv(env_bgpid, bgpid_str, 1) == -1)
+                                err(1, "setenv(): %s", bgpid_str);
+                            free(bgpid_str);
+                        }
                         break;
                 }
                 break;
