@@ -46,14 +46,14 @@ struct Command parseCommand(char** tokens, size_t numTokens)
                     break;
             }
         }
-        /* Assign command name and check for built-in commands */
-        else if (cmd.name == NULL) {
-            cmd.name = tokens[i];
-            if (strcmp(cmd.name, "cd") == 0) cmd.cmd_t = CD;
-            else if (strcmp(cmd.name, "exit") == 0) cmd.cmd_t = EXIT;
-        }
         /* Add token to argument list */
         else {
+            /* Assign command name and check for built-in commands */
+            if (cmd.name == NULL) {
+                cmd.name = tokens[i];
+                if (strcmp(cmd.name, "cd") == 0) cmd.cmd_t = CD;
+                else if (strcmp(cmd.name, "exit") == 0) cmd.cmd_t = EXIT;
+            }
             cmd.argv[cmd.argc] = tokens[i];
             ++cmd.argc;
         }
@@ -75,34 +75,34 @@ enum RD_FLAG checkRedirect(const char* token)
 
 void cmd_cd (char** argv, const int argc)
 {
-    if (argc > 1) {
+    if (argc > 2) {
         errno = E2BIG;
         warn("cd");
         return;
     }
-    if (argc == 0) {
-        argv[0] = getenv("HOME");
+    if (argc == 1) {
+        argv[1] = getenv("HOME");
     }
-    if(chdir(argv[0]) != 0) warn("chdir");
+    if(chdir(argv[1]) != 0) warn("chdir");
 }
 
 void cmd_exit(char** argv, const int argc)
 {
     /* Validate command args */
-    if (argc > 1) {
+    if (argc > 2) {
         errno = E2BIG;
         warn("exit");
         return;
     }
-    if (argc == 0) {
-        argv[0] = getenv(expand("$?"));
+    if (argc == 1) {
+        argv[1] = getenv(expand("$?"));
     }
 
     /* Convert argument to status int */
     errno = 0;
     char* end = NULL;
-    const long status = strtol(argv[0], &end, 10);
-    if(strcmp(argv[0], end) == 0 || status > 255 || status < 0) {
+    const long status = strtol(argv[1], &end, 10);
+    if(strcmp(argv[1], end) == 0 || status > 255 || status < 0) {
         warnx("exit: Invalid argument");
         return;
     }
