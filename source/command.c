@@ -1,5 +1,7 @@
 #include "command.h"
 
+#include <stdio.h>
+
 struct Command parseCommand(char** tokens, size_t numTokens)
 {
     /* Initialize command struct */
@@ -111,4 +113,19 @@ void cmd_exit(char** argv, const int argc)
         return;
     }
     _exit(status);
+}
+
+void cmd_external(struct Command cmd)
+{
+    pid_t child_pid;
+    switch(child_pid = fork()) {
+        case -1:
+            warn("fork");
+            return;
+        case 0:
+            execute(cmd);
+            break;
+        default:
+            break;
+    }
 }
