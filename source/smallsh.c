@@ -61,6 +61,7 @@ int main(int argc, char* argv[])
         if (input == stdin) {
             if (errno == EINTR) {
                 clearerr(input);
+                if (putchar('\n') == EOF) err(1, "putchar");
                 continue;
             }
             signal(SIGINT, SIG_IGN);
@@ -96,7 +97,6 @@ int main(int argc, char* argv[])
         }
 
         /* Prepare for next loop */
-        //if (putchar('\n') == EOF) warn("putchar");
         free(cmd.argv);
         fflush(stdout);
     }
