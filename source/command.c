@@ -126,4 +126,7 @@ void execute(struct Command cmd)
         if (output_fd == -1) err(1, "open: %s", cmd.outputFile);
         if (dup2(output_fd, STDOUT_FILENO) == -1) err(1, "target dup2()");
     }
+
+    /* Execute external program */
+    if(execvp(cmd.name, cmd.argv) == -1) err(1, "execvp(): %s", cmd.name);
 }
