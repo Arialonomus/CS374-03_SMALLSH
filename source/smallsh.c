@@ -10,7 +10,7 @@
 #include "expand.h"
 #include "command.h"
 
-int main(int argc, char* argv[])
+int main(int argc, char* argv[], char* envp[])
 {
     /* Select mode based on passed-in arguments */
     // DEFAULT: Interactive Mode
@@ -43,10 +43,7 @@ int main(int argc, char* argv[])
 
         /* Read a line from input */
         ssize_t const lineLength = getline(&line, &n, input);
-        if (lineLength < 0) {
-            warn("%s", inputFileName);
-            continue;
-        }
+        if (lineLength < 0) err(1, "%s", inputFileName);
 
         /* Tokenize input line and expand parameters */
         size_t const numWords = wordsplit(line, words);
@@ -69,14 +66,34 @@ int main(int argc, char* argv[])
                     break;
                 }
                 if (cmd.argc == 0) {
-                    cmd.argv[0] = expand(getenv("HOME"));
+                    cmd.argv[0] = getenv("HOME");
                 }
                 if(chdir(cmd.argv[0]) != 0) warn("chdir");
                 break;
             /* Built-In Command: exit */
             case EXIT:
-                printf("Command: EXIT");
-                break;
+                // Validate command args
+                if (cmd.argc > 1) {
+                    errno = E2BIG;
+                    warn("exit");
+                    break;
+                }
+                if (cmd.argc == 0) {
+                    cmd.argv[0] = expand("$?");
+                }
+                // Convert argument to status int
+                errno = 0;
+                char* end = NULL;
+                long status = strtol(cmd.argv[0], &end, 10);
+                if(strcmp(cmd.argv[0],end) == 0 || status > 255 || status < 0) {
+                    warnx("exit: Invalid argument\n");
+                    break;
+                }
+                if(errno != 0) {
+                    warn("exit");
+                    break;
+                }
+                exit(status);
             /* External Commands */
             case EXTERNAL:
                 printf("Command: External");
@@ -86,7 +103,7 @@ int main(int argc, char* argv[])
         }
 
         /* Prepare for next loop */
-        if (putchar('\n') == EOF) warn("putchar");
+        //if (putchar('\n') == EOF) warn("putchar");
         free(cmd.argv);
         fflush(stdout);
     }
