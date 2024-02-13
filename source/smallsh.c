@@ -3,7 +3,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <err.h>
+#include <errno.h>
 #include <string.h>
+#include <unistd.h>
 #include "wordsplit.h"
 #include "expand.h"
 #include "command.h"
@@ -33,8 +35,7 @@ int main(int argc, char* argv[])
         /* TODO: Manage background processes */
 
         /* Expand and print interactive mode prompt */
-        if (input == stdin)
-        {
+        if (input == stdin) {
             char* promptStr = getenv("PS1");
             if (!promptStr) promptStr = "$";
             fprintf(stderr, "%s", expand(promptStr));
@@ -42,13 +43,15 @@ int main(int argc, char* argv[])
 
         /* Read a line from input */
         ssize_t const lineLength = getline(&line, &n, input);
-        if (lineLength < 0) err(1, "%s", inputFileName);
+        if (lineLength < 0) {
+            warn("%s", inputFileName);
+            continue;
+        }
 
         /* Tokenize input line and expand parameters */
         size_t const numWords = wordsplit(line, words);
         if (numWords < 1) continue;     // Skip processing for empty commands
-        for (size_t i = 0; i < numWords; ++i)
-        {
+        for (size_t i = 0; i < numWords; ++i) {
             char* expandedWord = expand(words[i]);
             free(words[i]);
             words[i] = expandedWord;
@@ -56,20 +59,34 @@ int main(int argc, char* argv[])
 
         /* Parse and execute command */
         struct Command const cmd = parseCommand(words, numWords);
+        if (cmd.name == NULL) continue; // Abort processing for malformed command
         switch(cmd.cmd_t) {
+            /* Built-In Command: cd */
             case CD:
-                printf("Command: CD");
+                if (cmd.argc > 1) {
+                    errno = E2BIG;
+                    warn("cd");
+                    break;
+                }
+                if (cmd.argc == 0) {
+                    cmd.argv[0] = expand(getenv("HOME"));
+                }
+                if(chdir(cmd.argv[0]) != 0) warn("chdir");
                 break;
+            /* Built-In Command: exit */
             case EXIT:
                 printf("Command: EXIT");
                 break;
+            /* External Commands */
             case EXTERNAL:
                 printf("Command: External");
+                break;
+            default:
                 break;
         }
 
         /* Prepare for next loop */
-        if (putchar('\n') == EOF) err(1, "putchar");
+        if (putchar('\n') == EOF) warn("putchar");
         free(cmd.argv);
         fflush(stdout);
     }
