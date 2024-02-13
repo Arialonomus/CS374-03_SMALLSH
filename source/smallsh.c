@@ -20,8 +20,13 @@ int main(int argc, char* argv[])
     FILE* input = stdin;
     char* inputFileName = "(stdin)";
     if(argc < 2) {
-        signal(SIGTSTP, SIG_IGN);
-        signal(SIGINT, SIG_IGN);
+        struct sigaction olddisp_SIGINT;
+        if(sigaction(SIGINT, NULL, &olddisp_SIGINT) == -1) err(1, "sigaction(olddisp_SIGINT)");
+        if(signal(SIGINT, SIG_IGN) == SIG_ERR) err(1, "signal(SIGINT)");
+
+        struct sigaction olddisp_SIGTSTP;
+        if(sigaction(SIGINT, NULL, &olddisp_SIGTSTP) == -1) err(1, "sigaction(olddisp_SIGTSTP)");
+        if(signal(SIGTSTP, SIG_IGN) == SIG_ERR) err(1, "signal(SIGTSTP)");
     }
     // Non-Interactive Mode
     else if (argc == 2) {
@@ -49,9 +54,9 @@ int main(int argc, char* argv[])
             /* Change SIGINT disposition for line read */
             struct sigaction act = {0};
             act.sa_handler = sigint_handler;
-            if (sigfillset(&act.sa_mask) != 0) err(1, "sigfillset");
+            if (sigfillset(&act.sa_mask) == -1) err(1, "sigfillset");
             act.sa_flags = 0;
-            if(sigaction(SIGINT, &act, NULL) != 0) err(1, "sigaction");
+            if(sigaction(SIGINT, &act, NULL) == -1) err(1, "sigaction");
         }
 
         /* Read a line from input */
@@ -79,7 +84,7 @@ int main(int argc, char* argv[])
         /* Parse and execute command */
         struct Command const cmd = parseCommand(words, numWords);
         if (cmd.name == NULL) continue; // Abort processing for malformed command
-        switch(cmd.cmd_t) {
+        switch(cmd.cmd_t) {             // NOTE: All error handling is carried out within cmd_ functions
             /* Built-In Command: cd */
             case CD:
                 cmd_cd(cmd.argv, cmd.argc);
