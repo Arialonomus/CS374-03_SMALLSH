@@ -60,6 +60,7 @@ struct Command parseCommand(char** tokens, size_t numTokens)
     }
 
     /* Cleanup & Exit */
+    cmd.argv[cmd.argc] = NULL;
     return cmd;
 }
 
