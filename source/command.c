@@ -63,7 +63,7 @@ void cmd_external(struct Command cmd, struct sigaction** dispositions)
             /* Foreground Processes */
             if (!cmd.background) {
                 int status;
-                if(waitpid(child_pid, &status, 0) == -1)
+                if(waitpid(child_pid, &status, WUNTRACED) == -1)
                     err(1, "waitpid(): %jd", (intmax_t)child_pid);
                 if (WIFEXITED(status)) {
                     if (set_exitstatus(WEXITSTATUS(status)) == -1) err(1, "set_exitstatus()");
@@ -86,7 +86,7 @@ void cmd_external(struct Command cmd, struct sigaction** dispositions)
 
 void continue_child(pid_t pid)
 {
-    kill(pid, SIGCONT);
+    if(kill(pid, SIGCONT) == -1) err(1, "kill(%jd, SIGCONT)", (intmax_t) pid);
     fprintf(stderr, "Child process %jd stopped. Continuing.\n", (intmax_t) pid);
     if (set_bgpid(pid) == -1) err(1, "set_bgpid()");
 }

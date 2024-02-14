@@ -1,3 +1,6 @@
 #include "handlers.h"
 
-void sigint_handler(int sig) {}
+void sigint_handler(int sig)
+{
+
+}

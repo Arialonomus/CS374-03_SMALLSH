@@ -30,21 +30,27 @@ int main(int argc, char* argv[])
     free(pid_str);
     pid_str = NULL;
 
+    /* Prep signal handling */
+    struct sigaction** dispositions = NULL;
+    struct sigaction ignore;
+    ignore.sa_handler = SIG_IGN;
+    if (sigemptyset(&ignore.sa_mask) == -1) err(1, "sigemptyset");
+    ignore.sa_restorer = NULL;
+
     /* Select mode based on passed-in arguments */
     // DEFAULT: Interactive Mode
     FILE* input = stdin;
     char* inputFileName = "(stdin)";
-    struct sigaction** dispositions = NULL;
     if(argc < 2) {
         /* Set up signal handling and store previous dispositions */
         dispositions = malloc(sizeof(struct sigaction*) * NUM_IGNORED);
         for (int i = 0; i < NUM_IGNORED; ++i) {
-            struct sigaction* sigact_ptr = malloc(sizeof(struct sigaction));
-            if(sigaction(IGNORED[i], NULL, sigact_ptr) == -1)
+            struct sigaction* oldact = malloc(sizeof(struct sigaction));
+            if(sigaction(IGNORED[i], NULL, oldact) == -1)
                 err(1, "sigaction(): store old disposition for %d", IGNORED[i]);
-            dispositions[i] = sigact_ptr;
-            if(signal(IGNORED[i], SIG_IGN) == SIG_ERR)
-                err(1, "signal(): ignore %d", IGNORED[i]);
+            dispositions[i] = oldact;
+            if(sigaction(IGNORED[i], &ignore, NULL) == -1)
+                err(1, "sigaction(): ignore %d", IGNORED[i]);
         }
     }
     // Non-Interactive Mode
@@ -63,18 +69,18 @@ int main(int argc, char* argv[])
     for (;;) {
         /* Manage background processes */
         int bg_status;
-        pid_t bg_pid = waitpid(0, &bg_status, WNOHANG);
+        pid_t bg_pid = waitpid(0, &bg_status, WNOHANG | WUNTRACED );
         if (bg_pid == -1 && errno != ECHILD) {
             err (1, "waitpid(): background process management");
         }
         while (bg_pid > 0) {
             if (WIFEXITED(bg_status)) {
-                fprintf(stderr, "Child process %jd done. Exit status %d\n",
+                fprintf(stderr, "Child process %jd done. Exit status %d.\n",
                     (intmax_t) bg_pid, WEXITSTATUS(bg_status));
             }
             else if (WIFSIGNALED(bg_status)) {
-                int term_sig = WTERMSIG(bg_status) + TERMSIG_OFFSET;
-                fprintf(stderr, "Child process %jd done. Signaled %d\n",
+                int term_sig = WTERMSIG(bg_status);
+                fprintf(stderr, "Child process %jd done. Signaled %d.\n",
                     (intmax_t) bg_pid, term_sig);
             }
             else if (WIFSTOPPED(bg_status)) {
@@ -95,10 +101,11 @@ int main(int argc, char* argv[])
             fprintf(stderr, "%s", promptStr);
 
             /* Change SIGINT disposition for line read */
-            struct sigaction act = {0};
+            struct sigaction act;
             act.sa_handler = sigint_handler;
             if (sigfillset(&act.sa_mask) == -1) err(1, "sigfillset");
             act.sa_flags = 0;
+            act.sa_restorer = NULL;
             if(sigaction(SIGINT, &act, NULL) == -1) err(1, "sigaction");
         }
 
@@ -106,17 +113,18 @@ int main(int argc, char* argv[])
         ssize_t const lineLength = getline(&line, &n, input);
         if (lineLength < 0) {
             if (feof(input)) break;
-            if (ferror(input)) err(1, "getline(): %s", inputFileName);
+            if (ferror(input) && input != stdin) err(1, "getline(): %s", inputFileName);
         }
 
         /* Handle read errors in interactive mode */
         if (input == stdin) {
             if (errno == EINTR) {
                 clearerr(input);
-                if (putchar('\n') == EOF) err(1, "putchar");
+                fprintf(stderr, "\n");
                 continue;
             }
-            signal(SIGINT, SIG_IGN);
+            if(sigaction(SIGINT, &ignore, NULL) == -1)
+                err(1, "sigaction(): ignore %d", SIGINT);
         }
 
         /* Tokenize input line and expand parameters */
