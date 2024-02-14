@@ -53,7 +53,25 @@ int main(int argc, char* argv[])
 
     for (;;) {
         /* Manage background processes */
-
+        int bg_status;
+        pid_t bg_pid = waitpid(0, &bg_status, WNOHANG);
+        if (bg_pid == -1) err (1, "waitpid(): background process management");
+        while (bg_pid != 0) {
+            if (WIFEXITED(bg_status)) {
+                fprintf(stderr, "Child process %jd done. Exit status %d\n",
+                    (intmax_t) bg_pid, WEXITSTATUS(bg_status));
+            }
+            else if (WIFSIGNALED(bg_status)) {
+                int term_sig = WTERMSIG(bg_status) + TERMSIG_OFFSET;
+                fprintf(stderr, "Child process %jd done. Signaled %d\n",
+                    (intmax_t) bg_pid, term_sig);
+            }
+            else if (WIFSTOPPED(bg_status)) {
+                continue_child(bg_pid);
+            }
+            bg_pid = waitpid(0, &bg_status, WNOHANG);
+            if (bg_pid == -1) err (1, "waitpid(): background process management");
+        }
 
         /* Interactive mode housekeeping */
         if (input == stdin) {
