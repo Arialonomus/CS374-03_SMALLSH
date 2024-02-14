@@ -7,6 +7,10 @@
 #ifndef SMALLSH_COMMAND_H
 #define SMALLSH_COMMAND_H
 
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
@@ -69,7 +73,7 @@ void cmd_cd (char** argv, const int argc);
 void cmd_exit(char** argv, const int argc);
 
 /* Handles process forking for external commands */
-void cmd_external(struct Command cmd, struct sigaction* dispositions[]);
+void cmd_external(struct Command cmd, struct sigaction** dispositions);
 
 /* Sends a SIGCONT signal to a stopped child and prints a notice of this action to stderror */
 void continue_child(pid_t pid);

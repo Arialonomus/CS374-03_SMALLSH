@@ -11,10 +11,15 @@
 #ifndef SMALLSH_PARSER_H
 #define SMALLSH_PARSER_H
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #ifndef MAX_WORDS
 #define MAX_WORDS 512
 #endif
 
+#include <signal.h>
 #include <stdbool.h>
 #include <ctype.h>
 #include <stdlib.h>

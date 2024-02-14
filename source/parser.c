@@ -122,7 +122,7 @@ struct Redirect* checkRedirect(const char* token)
     else return NULL;
 
     /* Allocate a struct for the redirect and return */
-    struct Redirect* temp_rd = malloc(sizeof(struct Redirect*));
+    struct Redirect* temp_rd = malloc(sizeof(struct Redirect));
     temp_rd->type = type;
     temp_rd->destination = NULL;
     return temp_rd;

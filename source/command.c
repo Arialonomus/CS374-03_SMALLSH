@@ -40,7 +40,7 @@ void cmd_exit(char** argv, const int argc)
     _exit(status);
 }
 
-void cmd_external(struct Command cmd, struct sigaction* dispositions[])
+void cmd_external(struct Command cmd, struct sigaction** dispositions)
 {
     pid_t child_pid;
     switch(child_pid = fork()) {
@@ -51,7 +51,7 @@ void cmd_external(struct Command cmd, struct sigaction* dispositions[])
         /* Child Process */
         case 0:
             /* Reset signal dispositions */
-            for (int i = 0; i < NUM_IGNORED; ++i) {
+            for (int i = 0; dispositions && i < NUM_IGNORED; ++i) {
                 if(sigaction(IGNORED[i], dispositions[i], NULL) == -1)
                     err(1, "sigaction(): restore disposition for %d", IGNORED[i]);
             }
