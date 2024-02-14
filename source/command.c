@@ -134,6 +134,7 @@ void cmd_external(struct Command cmd, struct sigaction* dispositions[])
             break;
         /* Parent Process */
         default:
+            /* Foreground Processes */
             if (!cmd.background) {
                 int status;
                 if(waitpid(child_pid, &status, 0) == -1)
@@ -142,20 +143,26 @@ void cmd_external(struct Command cmd, struct sigaction* dispositions[])
                     if (set_exitstatus(WEXITSTATUS(status)) == -1) err(1, "set_exitstatus()");
                 }
                 else if (WIFSIGNALED(status)) {
-                    int termSig = WTERMSIG(status) + 128;
+                    int termSig = WTERMSIG(status) + TERMSIG_OFFSET;
                     if (set_exitstatus(termSig) == -1) err(1, "set_exitstatus()");
                 }
                 else if (WIFSTOPPED(status)) {
-                    kill(child_pid, SIGCONT);
-                    fprintf(stderr, "Child process %jd stopped. Continuing.\n", (intmax_t)child_pid);
-                    if (set_bgpid(child_pid) == -1) err(1, "set_bgpid()");
+                    continue_child(child_pid);
                 }
             }
+            /* Background Processes */
             else {
                 if (set_bgpid(child_pid) == -1) err(1, "set_bgpid()");
             }
             break;
     }
+}
+
+void continue_child(pid_t pid)
+{
+    kill(pid, SIGCONT);
+    fprintf(stderr, "Child process %jd stopped. Continuing.\n", (intmax_t) pid);
+    if (set_bgpid(pid) == -1) err(1, "set_bgpid()");
 }
 
 void execute(struct Command cmd)
