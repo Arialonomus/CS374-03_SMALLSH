@@ -171,13 +171,15 @@ void execute(struct Command cmd)
     if(cmd.inputFile) {
         int input_fd = open(cmd.inputFile, O_RDONLY );
         if (input_fd == -1) err(1, "open: %s", cmd.inputFile);
+        close (STDIN_FILENO);
         if (dup2(input_fd, STDIN_FILENO) == -1) err(1, "source dup2()");
         close (input_fd);
     }
     if(cmd.outputFile) {
-        int openFlags = O_WRONLY | O_CREAT;
-        int output_fd = open(cmd.outputFile, cmd.append ? openFlags | O_APPEND : openFlags | O_TRUNC, 0777);
+        int openFlags = cmd.append == true ? O_WRONLY | O_CREAT | O_APPEND : O_WRONLY | O_CREAT | O_TRUNC;
+        int output_fd = open(cmd.outputFile, openFlags, 0777);
         if (output_fd == -1) err(1, "open: %s", cmd.outputFile);
+        close (STDOUT_FILENO);
         if (dup2(output_fd, STDOUT_FILENO) == -1) err(1, "target dup2()");
         close (output_fd);
     }
