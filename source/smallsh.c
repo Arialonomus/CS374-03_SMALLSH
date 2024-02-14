@@ -20,9 +20,9 @@
 int main(int argc, char* argv[])
 {
     /* Set default environment values */
-    if(setenv(expand("$?"), "0", 1) == -1)
+    if(setenv(expand("?"), "0", 1) == -1)
         err(1, "setenv(): %s", expand("$?"));
-    if(setenv(expand("$!"), "", 1) == -1)
+    if(setenv(expand("!"), "", 1) == -1)
         err(1, "setenv(): %s", expand("$!"));
 
     /* Select mode based on passed-in arguments */
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
     else if (argc == 2) {
         inputFileName = argv[1];
         input = fopen(inputFileName, "re");
-        if (!input) err(1, "%s", inputFileName);
+        if (!input) err(1, "fopen(): %s", inputFileName);
     }
     else if (argc > 2) { errx(1, "too many arguments"); }
 
@@ -55,8 +55,10 @@ int main(int argc, char* argv[])
         /* Manage background processes */
         int bg_status;
         pid_t bg_pid = waitpid(0, &bg_status, WNOHANG);
-        if (bg_pid == -1) err (1, "waitpid(): background process management");
-        while (bg_pid != 0) {
+        if (bg_pid == -1 && errno != ECHILD) {
+            err (1, "waitpid(): background process management");
+        }
+        while (bg_pid > 0) {
             if (WIFEXITED(bg_status)) {
                 fprintf(stderr, "Child process %jd done. Exit status %d\n",
                     (intmax_t) bg_pid, WEXITSTATUS(bg_status));
@@ -70,8 +72,11 @@ int main(int argc, char* argv[])
                 continue_child(bg_pid);
             }
             bg_pid = waitpid(0, &bg_status, WNOHANG);
-            if (bg_pid == -1) err (1, "waitpid(): background process management");
+            if (bg_pid == -1 && errno != ECHILD) {
+                err (1, "waitpid(): background process management");
+            }
         }
+        errno = 0;  // Clear potential ECHILD flag
 
         /* Interactive mode housekeeping */
         if (input == stdin) {
@@ -90,7 +95,10 @@ int main(int argc, char* argv[])
 
         /* Read a line from input */
         ssize_t const lineLength = getline(&line, &n, input);
-        if (lineLength < 0) err(1, "%s", inputFileName);
+        if (lineLength < 0) {
+            if (feof(input)) break;
+            if (ferror(input)) err(1, "getline(): %s", inputFileName);
+        }
 
         /* Handle read errors in interactive mode */
         if (input == stdin) {
