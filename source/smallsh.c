@@ -6,7 +6,6 @@
 #define _GNU_SOURCE
 #endif
 
-#include <environment.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
@@ -15,6 +14,7 @@
 #include <stdint.h>
 #include <err.h>
 #include "parser.h"
+#include "environment.h"
 
 int main(int argc, char* argv[])
 {
