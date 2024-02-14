@@ -96,7 +96,7 @@ void cmd_exit(char** argv, const int argc)
         return;
     }
     if (argc == 1) {
-        argv[1] = getenv(expand("$?"));
+        argv[1] = expand("$?");
     }
 
     /* Convert argument to status int */

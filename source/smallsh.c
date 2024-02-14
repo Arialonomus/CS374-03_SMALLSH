@@ -20,10 +20,15 @@
 int main(int argc, char* argv[])
 {
     /* Set default environment values */
-    if(setenv(expand("?"), "0", 1) == -1)
-        err(1, "setenv(): %s", expand("$?"));
-    if(setenv(expand("!"), "", 1) == -1)
-        err(1, "setenv(): %s", expand("$!"));
+    char* pid_str = NULL;
+    asprintf(&pid_str, "%jd", (intmax_t) getpid());
+    if(setenv("$", pid_str, 1) == -1)
+        err(1, "setenv(): $");
+    if(setenv("?", "0", 1) == -1)
+        err(1, "setenv(): ?");
+    if(setenv("!", "", 1) == -1)
+        err(1, "setenv(): !");
+    free(pid_str);
 
     /* Select mode based on passed-in arguments */
     // DEFAULT: Interactive Mode
@@ -83,7 +88,7 @@ int main(int argc, char* argv[])
             /* Expand and print prompt string */
             char* promptStr = getenv("PS1");
             if (!promptStr) promptStr = "$";
-            fprintf(stderr, "%s", expand(promptStr));
+            fprintf(stderr, "%s", promptStr);
 
             /* Change SIGINT disposition for line read */
             struct sigaction act = {0};

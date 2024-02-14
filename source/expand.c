@@ -61,6 +61,13 @@ char* build_str(char const *start, char const *end)
     return base;
 }
 
+char* getenvstr(char const* parameter)
+{
+    char* ret_str = getenv(parameter);
+    if (ret_str == NULL) return "";
+    return ret_str;
+}
+
 char* expand(char const *word)
 {
     char const *pos = word;
@@ -69,13 +76,15 @@ char* expand(char const *word)
     build_str(NULL, NULL);
     build_str(pos, start);
     while (c) {
-        if (c == '!') build_str("<BGPID>", NULL);
-        else if (c == '$') build_str("<PID>", NULL);
-        else if (c == '?') build_str("<STATUS>", NULL);
+        if (c == '!') build_str(getenvstr("!"), NULL);
+        else if (c == '$') build_str(getenvstr("$"), NULL);
+        else if (c == '?') build_str(getenvstr("?"), NULL);
         else if (c == '{') {
-            build_str("<Parameter: ", NULL);
-            build_str(start + 2, end - 1);
-            build_str(">", NULL);
+            const size_t param_len = end - start - 3;
+            char param[param_len + 1];
+            strncpy(param, start + 2, param_len);
+            param[param_len] = '\0';
+            build_str(getenvstr(param), NULL);
         }
         pos = end;
         c = param_scan(pos, &start, &end);
