@@ -19,3 +19,10 @@ int set_exitstatus(int status)
 
     return 0;
 }
+
+char* getenvstr(char const* parameter)
+{
+    char* ret_str = getenv(parameter);
+    if (ret_str == NULL) return "";
+    return ret_str;
+}

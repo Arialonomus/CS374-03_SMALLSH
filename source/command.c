@@ -1,79 +1,5 @@
 #include "command.h"
 
-struct Command parseCommand(char** tokens, size_t numTokens)
-{
-    /* Initialize command struct */
-    struct Command cmd = {
-        EXTERNAL,
-        NULL,
-        malloc(sizeof(char*) * (numTokens + 1)),
-        0,
-        NULL,
-        NULL,
-        false,
-        false
-        };
-    if(!cmd.argv) err(1, "malloc");
-
-    /* Check if last token is "&" for background process indicatior */
-    int numToParse = numTokens;
-    if (strcmp(tokens[numToParse - 1], "&") == 0) {
-        cmd.background = true;
-        --numToParse;
-    }
-
-    /* Iterate through tokens to parse command arguments */
-    for (int i = 0; i < numToParse; ++i)
-    {
-        /* Handle redirection */
-        const enum RD_FLAG rd_t = checkRedirect(tokens[i]);
-        if (rd_t != NONE && cmd.cmd_t == EXTERNAL) {
-            ++i;                            // Skip the redirection operator
-            if (i >= numTokens) return cmd; // Return if operator is the last token
-            switch (rd_t) {
-                case RD_IN:
-                    cmd.inputFile = tokens[i];
-                    break;
-                case RD_APPEND:
-                    cmd.outputFile = tokens[i];
-                    cmd.append = true;
-                    break;
-                case RD_OUT:
-                    cmd.outputFile = tokens[i];
-                    cmd.append = false;
-                    break;
-                default:
-                    break;
-            }
-        }
-        /* Add token to argument list */
-        else {
-            /* Assign command name and check for built-in commands */
-            if (cmd.name == NULL) {
-                cmd.name = tokens[i];
-                if (strcmp(cmd.name, "cd") == 0) cmd.cmd_t = CD;
-                else if (strcmp(cmd.name, "exit") == 0) cmd.cmd_t = EXIT;
-            }
-            cmd.argv[cmd.argc] = tokens[i];
-            ++cmd.argc;
-        }
-    }
-
-    /* Cleanup & Exit */
-    cmd.argv[cmd.argc] = NULL;
-    return cmd;
-}
-
-enum RD_FLAG checkRedirect(const char* token)
-{
-    enum RD_FLAG rd_t = NONE;
-    if (strcmp(token, "<") == 0) rd_t = RD_IN;
-    else if (strcmp(token, ">") == 0)  rd_t = RD_OUT;
-    else if (strcmp(token, ">>") == 0) rd_t = RD_APPEND;
-
-    return rd_t;
-}
-
 void cmd_cd (char** argv, const int argc)
 {
     if (argc > 2) {
@@ -96,7 +22,7 @@ void cmd_exit(char** argv, const int argc)
         return;
     }
     if (argc == 1) {
-        argv[1] = expand("$?");
+        argv[1] = getenvstr("?");
     }
 
     /* Convert argument to status int */

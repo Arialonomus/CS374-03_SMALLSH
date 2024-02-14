@@ -6,9 +6,9 @@
 #ifndef SMALLSH_HANDLERS_H
 #define SMALLSH_HANDLERS_H
 
-#define NUM_IGNORED 2
+#include <signal.h>
 
-#include <stddef.h>
+#define NUM_IGNORED 2
 
 /* Global variables for signal handling */
 static const int IGNORED[NUM_IGNORED] = {SIGINT, SIGTSTP};

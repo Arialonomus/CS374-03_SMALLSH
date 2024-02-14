@@ -13,9 +13,8 @@
 #include <signal.h>
 #include <sys/wait.h>
 #include <stdint.h>
-
-#include "wordsplit.h"
-#include "command.h"
+#include <err.h>
+#include "parser.h"
 
 int main(int argc, char* argv[])
 {
@@ -116,7 +115,7 @@ int main(int argc, char* argv[])
         }
 
         /* Tokenize input line and expand parameters */
-        size_t const numWords = wordsplit(line, words);
+        size_t const numWords = tokenize(line, words);
         if (numWords < 1) continue;     // Skip processing for empty commands
         for (size_t i = 0; i < numWords; ++i) {
             char* expandedWord = expand(words[i]);

@@ -1,7 +1,7 @@
 /*
  * Program: CS 374 Assignment 03 - SMALLSH
  *
- * This file contains functions related to command parsing and execution
+ * This file contains functions related to command execution
  */
 
 #ifndef SMALLSH_COMMAND_H
@@ -13,11 +13,15 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include <err.h>
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdint.h>
 #include "handlers.h"
 #include "environment.h"
 
@@ -29,15 +33,6 @@ enum CommandType
     CD,
     EXIT,
     EXTERNAL
-};
-
-/* Flags for determining redirection type */
-enum RD_FLAG
-{
-    NONE,
-    RD_IN,
-    RD_OUT,
-    RD_APPEND
 };
 
 /* Holds data about a command to be executed */
@@ -52,12 +47,6 @@ struct Command
     bool append;            // Flag for if input is appended
     bool background;        // Flag for if process should run in background
 };
-
-/* Parses an array of tokenized strings and returns a Command struct */
-struct Command parseCommand(char** tokens, size_t numTokens);
-
-/* Checks if a token is a redirect operator. If so, returns the operator type */
-enum RD_FLAG checkRedirect(const char* token);
 
 /* Built-In Command "cd": changes the working directory of smallsh */
 void cmd_cd (char** argv, const int argc);
