@@ -7,11 +7,11 @@
 #define SMALLSH_HANDLERS_H
 
 #include <signal.h>
-
-#define NUM_IGNORED 2
+#include <stddef.h>
 
 /* Global variables for signal handling */
-static const int IGNORED[NUM_IGNORED] = {SIGINT, SIGTSTP};
+static const int IGNORED[] = {SIGINT, SIGTSTP};
+static const size_t NUM_IGNORED = sizeof(IGNORED) / sizeof(int);
 
 typedef void (*sighandler_t)(int);
 

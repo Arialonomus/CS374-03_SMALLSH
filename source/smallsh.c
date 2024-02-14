@@ -28,18 +28,23 @@ int main(int argc, char* argv[])
     if(setenv("!", "", 1) == -1)
         err(1, "setenv(): !");
     free(pid_str);
+    pid_str = NULL;
 
     /* Select mode based on passed-in arguments */
     // DEFAULT: Interactive Mode
     FILE* input = stdin;
     char* inputFileName = "(stdin)";
-    struct sigaction* dispositions[NUM_IGNORED] = {NULL};
+    struct sigaction** dispositions = NULL;
     if(argc < 2) {
+        /* Set up signal handling and store previous dispositions */
+        dispositions = malloc(sizeof(struct sigaction*) * NUM_IGNORED);
         for (int i = 0; i < NUM_IGNORED; ++i) {
-            if(sigaction(IGNORED[i], NULL, dispositions[i]) == -1)
+            struct sigaction* sigact_ptr = malloc(sizeof(struct sigaction));
+            if(sigaction(IGNORED[i], NULL, sigact_ptr) == -1)
                 err(1, "sigaction(): store old disposition for %d", IGNORED[i]);
+            dispositions[i] = sigact_ptr;
             if(signal(IGNORED[i], SIG_IGN) == SIG_ERR)
-                err(1, "signal(%d)", IGNORED[i]);
+                err(1, "signal(): ignore %d", IGNORED[i]);
         }
     }
     // Non-Interactive Mode
