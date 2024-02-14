@@ -24,15 +24,6 @@
 #include "environment.h"
 #include "command.h"
 
-/* Flags for determining redirection type */
-enum RD_FLAG
-{
- NONE,
- RD_IN,
- RD_OUT,
- RD_APPEND
-};
-
 /* Splits a string into words delimited by whitespace. Recognizes
  * comments as '#' at the beginning of a word, and backslash escapes.
  *
@@ -58,8 +49,11 @@ char* build_str(char const *start, char const *end);
  */
 char* expand(char const *word);
 
-/* Checks if a token is a redirect operator. If so, returns the operator type */
-enum RD_FLAG checkRedirect(const char* token);
+/* Checks if a token is a redirect operator.
+ * If yes, returns a pointer to a Redirect struct of the appropriate type,
+ * otherwise returns NULL
+ */
+struct Redirect* checkRedirect(const char* token);
 
 /* Parses an array of tokenized strings and returns a Command struct */
 struct Command parseCommand(char** tokens, size_t numTokens);

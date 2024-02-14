@@ -112,14 +112,20 @@ char* expand(char const *word)
     return build_str(start, NULL);
 }
 
-enum RD_FLAG checkRedirect(const char* token)
+struct Redirect* checkRedirect(const char* token)
 {
-    enum RD_FLAG rd_t = NONE;
-    if (strcmp(token, "<") == 0) rd_t = RD_IN;
-    else if (strcmp(token, ">") == 0)  rd_t = RD_OUT;
-    else if (strcmp(token, ">>") == 0) rd_t = RD_APPEND;
+    /* Determine if the command is a redirect */
+    enum redirect_t type;
+    if (strcmp(token, "<") == 0) type = IN;
+    else if (strcmp(token, ">") == 0)  type = OUT;
+    else if (strcmp(token, ">>") == 0) type = APPEND;
+    else return NULL;
 
-    return rd_t;
+    /* Allocate a struct for the redirect and return */
+    struct Redirect* temp_rd = malloc(sizeof(struct Redirect*));
+    temp_rd->type = type;
+    temp_rd->destination = NULL;
+    return temp_rd;
 }
 
 struct Command parseCommand(char** tokens, size_t numTokens)
@@ -131,8 +137,7 @@ struct Command parseCommand(char** tokens, size_t numTokens)
         malloc(sizeof(char*) * (numTokens + 1)),
         0,
         NULL,
-        NULL,
-        false,
+        0,
         false
         };
     if(!cmd.argv) err(1, "malloc");
@@ -148,25 +153,17 @@ struct Command parseCommand(char** tokens, size_t numTokens)
     for (int i = 0; i < numToParse; ++i)
     {
         /* Handle redirection */
-        const enum RD_FLAG rd_t = checkRedirect(tokens[i]);
-        if (rd_t != NONE && cmd.cmd_t == EXTERNAL) {
+        struct Redirect* rd_ptr = checkRedirect(tokens[i]);
+        if (rd_ptr && cmd.cmd_t == EXTERNAL) {
             ++i;                            // Skip the redirection operator
-            if (i >= numTokens) return cmd; // Return if operator is the last token
-            switch (rd_t) {
-                case RD_IN:
-                    cmd.inputFile = tokens[i];
-                    break;
-                case RD_APPEND:
-                    cmd.outputFile = tokens[i];
-                    cmd.append = true;
-                    break;
-                case RD_OUT:
-                    cmd.outputFile = tokens[i];
-                    cmd.append = false;
-                    break;
-                default:
-                    break;
+            if (i >= numTokens) {           // Return if operator is the last token
+                free(rd_ptr);
+                return cmd;
             }
+            rd_ptr->destination = tokens[i];
+            cmd.redirects = realloc(cmd.redirects, sizeof(struct Redirect*) * (cmd.rd_count + 1));
+            cmd.redirects[cmd.rd_count] = rd_ptr;
+            ++cmd.rd_count;
         }
         /* Add token to argument list */
         else {

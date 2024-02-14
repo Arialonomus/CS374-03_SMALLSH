@@ -94,21 +94,33 @@ void continue_child(pid_t pid)
 void execute(struct Command cmd)
 {
     /* Handle redirection */
-    if(cmd.inputFile) {
-        int input_fd = open(cmd.inputFile, O_RDONLY );
-        if (input_fd == -1) err(1, "open: %s", cmd.inputFile);
-        close (STDIN_FILENO);
-        if (dup2(input_fd, STDIN_FILENO) == -1) err(1, "source dup2()");
-        close (input_fd);
+    for (int i = 0; i < cmd.rd_count; ++i) {
+        int flags = -1, stream = -1;
+        switch (cmd.redirects[i]->type) {
+            case IN:
+                flags = O_RDONLY;
+                stream = STDIN_FILENO;
+                break;
+            case OUT:
+                flags = O_WRONLY | O_CREAT | O_TRUNC;
+                stream = STDOUT_FILENO;
+                break;
+            case APPEND:
+                flags = O_WRONLY | O_CREAT | O_APPEND;
+                stream = STDOUT_FILENO;
+                break;
+        }
+
+        /* Point the I/O stream at the destination file */
+        char* path = cmd.redirects[i]->destination;
+        const int fd = open(path, flags, 0777);
+        if (fd == -1) err(1, "open: %s", path);
+        close (stream);
+        if (dup2(fd, stream) == -1) err(1, "source dup2()");
+        close (fd);
+        free(cmd.redirects[i]);
     }
-    if(cmd.outputFile) {
-        int openFlags = cmd.append == true ? O_WRONLY | O_CREAT | O_APPEND : O_WRONLY | O_CREAT | O_TRUNC;
-        int output_fd = open(cmd.outputFile, openFlags, 0777);
-        if (output_fd == -1) err(1, "open: %s", cmd.outputFile);
-        close (STDOUT_FILENO);
-        if (dup2(output_fd, STDOUT_FILENO) == -1) err(1, "target dup2()");
-        close (output_fd);
-    }
+    free(cmd.redirects);
 
     /* Execute external program */
     if(execvp(cmd.name, cmd.argv) == -1) err(1, "execvp(): %s", cmd.name);

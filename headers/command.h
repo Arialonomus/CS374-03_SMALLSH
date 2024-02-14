@@ -27,6 +27,21 @@
 
 #define TERMSIG_OFFSET 128  // Offset for child process terminating signal reporting
 
+/* Flags for determining redirection type */
+enum redirect_t
+{
+    IN,
+    OUT,
+    APPEND
+};
+
+/* Holds information about a redirect for a command */
+struct Redirect
+{
+    enum redirect_t type;   // The type of redirect
+    char* destination;      // The filepath destination of the redirect
+};
+
 /* Flags for determining execution for pre-build commands */
 enum CommandType
 {
@@ -38,14 +53,13 @@ enum CommandType
 /* Holds data about a command to be executed */
 struct Command
 {
-    enum CommandType cmd_t; // Flags the type of the command
-    char* name;             // The name of the command to execute
-    char** argv;            // The list of arguments
-    size_t argc;            // Argument count
-    char* inputFile;        // Input file for redirection
-    char* outputFile;       // Output file for redirection
-    bool append;            // Flag for if input is appended
-    bool background;        // Flag for if process should run in background
+    enum CommandType cmd_t;         // Flags the type of the command
+    char* name;                     // The name of the command to execute
+    char** argv;                    // The list of argument strings
+    size_t argc;                    // Argument count (incl. cmd name at argv[0])
+    struct Redirect** redirects;    // The redirects for this command
+    size_t rd_count;                // Number of redirects
+    bool background;                // Flag for if process should run in background
 };
 
 /* Built-In Command "cd": changes the working directory of smallsh */

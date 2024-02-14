@@ -144,7 +144,10 @@ int main(int argc, char* argv[])
         }
 
         /* Prepare for next loop */
+        for(int i = 0; i < cmd.rd_count; ++i)
+            free(cmd.redirects[i]);
         free(cmd.argv);
+        free(cmd.redirects);
         fflush(stdout);
     }
 }
