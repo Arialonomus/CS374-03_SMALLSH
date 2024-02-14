@@ -175,7 +175,8 @@ void execute(struct Command cmd)
         close (input_fd);
     }
     if(cmd.outputFile) {
-        int output_fd = open(cmd.outputFile, cmd.append ? O_WRONLY | O_APPEND : O_WRONLY, 0777);
+        int openFlags = O_WRONLY | O_CREAT;
+        int output_fd = open(cmd.outputFile, cmd.append ? openFlags | O_APPEND : openFlags | O_TRUNC, 0777);
         if (output_fd == -1) err(1, "open: %s", cmd.outputFile);
         if (dup2(output_fd, STDOUT_FILENO) == -1) err(1, "target dup2()");
         close (output_fd);
