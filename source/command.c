@@ -1,6 +1,6 @@
 #include "command.h"
 
-void cmd_cd (char** argv, const int argc)
+void cmd_cd (char* argv[], const int argc)
 {
     if (argc > 2) {
         errno = E2BIG;
@@ -13,7 +13,7 @@ void cmd_cd (char** argv, const int argc)
     if(chdir(argv[1]) != 0) warn("chdir");
 }
 
-void cmd_exit(char** argv, const int argc)
+void cmd_exit(char* argv[], const int argc)
 {
     /* Validate command args */
     if (argc > 2) {
@@ -29,25 +29,29 @@ void cmd_exit(char** argv, const int argc)
     errno = 0;
     char* end = NULL;
     const long status = strtol(argv[1], &end, 10);
+    // Status is not a string, or is too large/too small
     if(strcmp(argv[1], end) == 0 || status > 255 || status < 0) {
         warnx("exit: Invalid argument");
         return;
     }
+    // strtol() threw an error
     if(errno != 0) {
-        warn("exit");
+        warn("strtol");
         return;
     }
     _exit(status);
 }
 
-void cmd_external(struct Command cmd, struct sigaction** dispositions)
+void cmd_external(const struct command cmd, struct sigaction* dispositions[])
 {
+    /* Fork a child process */
     pid_t child_pid;
     switch(child_pid = fork()) {
         /* Error */
         case -1:
             warn("fork");
             break;
+
         /* Child Process */
         case 0:
             /* Reset signal dispositions */
@@ -58,6 +62,7 @@ void cmd_external(struct Command cmd, struct sigaction** dispositions)
             /* Execute external command */
             execute(cmd);
             break;
+
         /* Parent Process */
         default:
             /* Foreground Processes */
@@ -84,10 +89,11 @@ void cmd_external(struct Command cmd, struct sigaction** dispositions)
     }
 }
 
-void execute(struct Command cmd)
+void execute(struct command cmd)
 {
-    /* Handle redirection */
+    /* Handle redirection operations */
     for (int i = 0; i < cmd.rd_count; ++i) {
+        /* Set flags and stream target based on redirect type */
         int flags = -1, stream = -1;
         switch (cmd.redirects[i]->type) {
             case IN:
@@ -115,6 +121,6 @@ void execute(struct Command cmd)
     }
     free(cmd.redirects);
 
-    /* Execute external program */
+    /* Launch external program */
     if(execvp(cmd.name, cmd.argv) == -1) err(1, "execvp(): %s", cmd.name);
 }

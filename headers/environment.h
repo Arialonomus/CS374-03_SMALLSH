@@ -16,10 +16,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-/* Sets the value of the $! environment variable */
+/* Sets the value of the $! environment variable, specific errors are not logged */
 int set_bgpid(pid_t pid);
 
-/* Sets the value of the $? environment variable */
+/* Sets the value of the $? environment variable, specific errors are not logged */
 int set_exitstatus(int status);
 
 /* Wrapper for getenv() that returns an empty string if no environment variable exists */

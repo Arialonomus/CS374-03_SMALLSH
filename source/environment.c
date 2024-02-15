@@ -1,6 +1,6 @@
 #include "environment.h"
 
-int set_bgpid(pid_t pid)
+int set_bgpid(const pid_t pid)
 {
     char* temp_str = NULL;
     if(asprintf(&temp_str, "%jd", (intmax_t)pid) == -1) return -1;
@@ -10,7 +10,7 @@ int set_bgpid(pid_t pid)
     return 0;
 }
 
-int set_exitstatus(int status)
+int set_exitstatus(const int status)
 {
     char* temp_str = NULL;
     if(asprintf(&temp_str, "%d", status) == -1) return -1;
@@ -20,7 +20,7 @@ int set_exitstatus(int status)
     return 0;
 }
 
-char* getenvstr(char const* parameter)
+char* getenvstr(char const* const parameter)
 {
     char* ret_str = getenv(parameter);
     if (ret_str == NULL) return "";

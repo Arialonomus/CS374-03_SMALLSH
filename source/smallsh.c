@@ -1,3 +1,13 @@
+/* Program: CS 374 Assignment 03 - SMALLSH
+ * Author: Jacob Barber
+ * UID: 934561945
+ *
+ * This program is a basic Linux shell which can execute scripts oe
+ * operate in interactive mode and execute commands. SMALLSH includes
+ * two built in commands, "cd" and "exit", as well as the ability to
+ * load and run external programs.
+ */
+
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #endif
@@ -40,7 +50,7 @@ int main(int argc, char* argv[])
     /* Select mode based on passed-in arguments */
     // DEFAULT: Interactive Mode
     FILE* input = stdin;
-    char* inputFileName = "(stdin)";
+    char* input_filepath = "(stdin)";
     if(argc < 2) {
         /* Set up signal handling and store previous dispositions */
         dispositions = malloc(sizeof(struct sigaction*) * NUM_IGNORED);
@@ -55,14 +65,14 @@ int main(int argc, char* argv[])
     }
     // Non-Interactive Mode
     else if (argc == 2) {
-        inputFileName = argv[1];
-        input = fopen(inputFileName, "re");
-        if (!input) err(1, "fopen(): %s", inputFileName);
+        input_filepath = argv[1];
+        input = fopen(input_filepath, "re");
+        if (!input) err(1, "fopen(): %s", input_filepath);
     }
     else if (argc > 2) { errx(1, "too many arguments"); }
 
     /* Main Program Loop */
-    char* words[MAX_WORDS] = {NULL};    // A program-level array of words representing tokenized arguments
+    char* tokens[MAX_ARGS] = {NULL};    // A program-level array of tokenized arguments
     char* line = NULL;                  // Holds a line read from input
     size_t n = 0;                       // Holds the number of characters in line
 
@@ -113,7 +123,7 @@ int main(int argc, char* argv[])
         ssize_t const lineLength = getline(&line, &n, input);
         if (lineLength < 0) {
             if (feof(input)) break;
-            if (ferror(input) && input != stdin) err(1, "getline(): %s", inputFileName);
+            if (ferror(input) && input != stdin) err(1, "getline(): %s", input_filepath);
         }
 
         /* Handle read errors in interactive mode */
@@ -128,18 +138,18 @@ int main(int argc, char* argv[])
         }
 
         /* Tokenize input line and expand parameters */
-        size_t const numWords = tokenize(line, words);
+        size_t const numWords = tokenize(line, tokens);
         if (numWords < 1) continue;     // Skip processing for empty commands
         for (size_t i = 0; i < numWords; ++i) {
-            char* expandedWord = expand(words[i]);
-            free(words[i]);
-            words[i] = expandedWord;
+            char* expanded_token = expand(tokens[i]);
+            free(tokens[i]);
+            tokens[i] = expanded_token;
         }
 
         /* Parse and execute command */
-        struct Command const cmd = parseCommand(words, numWords);
+        struct command const cmd = parse_command(tokens, numWords);
         if (cmd.name == NULL) continue; // Abort processing for malformed command
-        switch(cmd.cmd_t) {             // NOTE: All error handling is carried out within cmd_ functions
+        switch(cmd.type) {             // NOTE: All error handling is carried out within cmd_ functions
             /* Built-In Command: cd */
             case CD:
                 cmd_cd(cmd.argv, cmd.argc);

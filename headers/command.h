@@ -1,7 +1,7 @@
-/*
- * Program: CS 374 Assignment 03 - SMALLSH
+/* Program: CS 374 Assignment 03 - SMALLSH
  *
- * This file contains functions related to command execution
+ * This file contains functions and structs related to command execution,
+ * including execution of built-in commands and external programs
  */
 
 #ifndef SMALLSH_COMMAND_H
@@ -32,7 +32,7 @@
 #define TERMSIG_OFFSET 128  // Offset for child process terminating signal reporting
 
 /* Flags for determining redirection type */
-enum redirect_t
+enum rd_t
 {
     IN,
     OUT,
@@ -40,14 +40,14 @@ enum redirect_t
 };
 
 /* Holds information about a redirect for a command */
-struct Redirect
+struct redirect
 {
-    enum redirect_t type;   // The type of redirect
+    enum rd_t type;         // The type of redirect
     char* destination;      // The filepath destination of the redirect
 };
 
 /* Flags for determining execution for pre-build commands */
-enum CommandType
+enum cmd_t
 {
     CD,
     EXIT,
@@ -55,27 +55,27 @@ enum CommandType
 };
 
 /* Holds data about a command to be executed */
-struct Command
+struct command
 {
-    enum CommandType cmd_t;         // Flags the type of the command
+    enum cmd_t type;                // Flags the type of the command
     char* name;                     // The name of the command to execute
     char** argv;                    // The list of argument strings
     size_t argc;                    // Argument count (incl. cmd name at argv[0])
-    struct Redirect** redirects;    // The redirects for this command
+    struct redirect** redirects;    // The redirects for this command
     size_t rd_count;                // Number of redirects
     bool background;                // Flag for if process should run in background
 };
 
 /* Built-In Command "cd": changes the working directory of smallsh */
-void cmd_cd (char** argv, const int argc);
+void cmd_cd (char* argv[], int argc);
 
 /* Built-In Command "exit": safely exits smallsh */
-void cmd_exit(char** argv, const int argc);
+void cmd_exit(char* argv[], int argc);
 
 /* Handles process forking for external commands */
-void cmd_external(struct Command cmd, struct sigaction** dispositions);
+void cmd_external(struct command cmd, struct sigaction* dispositions[]);
 
 /* Executes a program based on a passed-in command */
-void execute(struct Command cmd);
+void execute(struct command cmd);
 
 #endif //SMALLSH_COMMAND_H

@@ -1,140 +1,169 @@
 #include "parser.h"
 
-size_t tokenize(char const* line, char** words) {
-    size_t wlen = 0;
-    size_t wind = 0;
+size_t tokenize(char const* line, char* words[]) {
+    size_t word_length = 0;
+    size_t index = 0;
 
-    char const *c = line;
-    for (;*c && isspace(*c); ++c); /* discard leading space */
+    /* Discard leading space(s) */
+    char const* char_ptr = line;
+    while (*char_ptr && isspace(*char_ptr))
+        ++char_ptr;
 
-    for (; *c;) {
-        if (wind == MAX_WORDS) break;
-        /* read a word */
-        if (*c == '#') break;
-        for (;*c && !isspace(*c); ++c) {
-            if (*c == '\\') ++c;
-            void *tmp = realloc(words[wind], sizeof **words * (wlen + 2));
+    /* Process the string to tokenize arguments */
+    while (*char_ptr) {
+        if (index == MAX_ARGS) break;   // End tokenizing if arg limit is exceeded
+        if (*char_ptr == '#') break;    // End tokenizing to discard comments
+
+        /* Read an argument */
+        while (*char_ptr && !isspace(*char_ptr)) {
+            if (*char_ptr == '\\') ++char_ptr;  // Process escaped characters
+
+            /* Reallocate memory so the token takes exactly the amount of space it needs */
+            void* tmp = realloc(words[index], sizeof **words * (word_length + 2));
             if (!tmp) err(1, "realloc");
-            words[wind] = tmp;
-            words[wind][wlen++] = *c;
-            words[wind][wlen] = '\0';
+            words[index] = tmp;
+            words[index][word_length] = *char_ptr;
+            ++word_length;
+            words[index][word_length] = '\0';
+            ++char_ptr;
         }
-        ++wind;
-        wlen = 0;
-        for (;*c && isspace(*c); ++c);
+
+        /* Prepare for next argument */
+        ++index;
+        word_length = 0;
+        while (*char_ptr && isspace(*char_ptr))
+            ++char_ptr;
     }
-    return wind;
+    return index;
 }
 
-char param_scan(char const *word, char const **start, char const **end)
+char param_scan(char const* word, char const** start, char const** end)
 {
-    static char const *prev;
+    /* Continue search from previous position if no word provided */
+    static char const* prev = NULL;     // End position of the last parameter
     if (!word) word = prev;
 
-    char ret = 0;
+    /* Search string for first occurence of '$' */
+    char param_t = 0;   // The parameter type to be expanded
     *start = 0;
     *end = 0;
-    for (char const *s = word; *s && !ret; ++s) {
-        s = strchr(s, '$');
-        if (!s) break;
-        switch (s[1]) {
+    for (char const* search_pos = word; *search_pos && !param_t; ++search_pos) {
+        search_pos = strchr(search_pos, '$');
+        if (!search_pos) break;
+        switch (search_pos[1]) {
+            /* Shell Variables */
             case '$':
             case '!':
             case '?':
-                ret = s[1];
-                *start = s;
-                *end = s + 2;
+                param_t = search_pos[1];
+                *start = search_pos;
+                *end = search_pos + 2;
                 break;
+            /* Custom Environment Variable */
             case '{':;
-                char *e = strchr(s + 2, '}');
-                if (e) {
-                    ret = s[1];
-                    *start = s;
-                    *end = e + 1;
+                char *end_pos = strchr(search_pos + 2, '}');
+                if (end_pos) {
+                    param_t = search_pos[1];
+                    *start = search_pos;
+                    *end = end_pos + 1;
                 }
                 break;
         }
     }
+
+    /* Log ending position and return */
     prev = *end;
-    return ret;
+    return param_t;
 }
 
-char* build_str(char const *start, char const *end)
+char* build_str(char const* start, char const* end)
 {
     static size_t base_len = 0;
-    static char *base = 0;
+    static char* base = NULL;
 
+    /* Reset; new base string, return old one */
     if (!start) {
-        /* Reset; new base string, return old one */
-        char *ret = base;
+        char* ret = base;
         base = NULL;
         base_len = 0;
         return ret;
     }
+
     /* Append [start, end) to base string
      * If end is NULL, append whole start string to base string.
      * Returns a newly allocated string that the caller must free.
      */
-    size_t n = end ? end - start : strlen(start);
-    size_t newsize = sizeof *base *(base_len + n + 1);
-    void *tmp = realloc(base, newsize);
+    size_t str_len = end ? end - start : strlen(start);
+    size_t newsize = sizeof *base * (base_len + str_len + 1);
+    void* tmp = realloc(base, newsize);
     if (!tmp) err(1, "realloc");
     base = tmp;
-    memcpy(base + base_len, start, n);
-    base_len += n;
+    memcpy(base + base_len, start, str_len);
+    base_len += str_len;
     base[base_len] = '\0';
 
     return base;
 }
 
-char* expand(char const *word)
+char* expand(char const* word)
 {
-    char const *pos = word;
-    char const *start, *end;
-    char c = param_scan(pos, &start, &end);
-    build_str(NULL, NULL);
+    /* Search string for first parameter */
+    char const* pos = word;
+    char const* start = NULL;
+    char const* end = NULL;
+    char param_t = param_scan(pos, &start, &end);
+
+    /* Build string up to first paramer occurence */
+    build_str(NULL, NULL);  // Reset the base string
     build_str(pos, start);
-    while (c) {
-        if (c == '!') build_str(getenvstr("!"), NULL);
-        else if (c == '$') build_str(getenvstr("$"), NULL);
-        else if (c == '?') build_str(getenvstr("?"), NULL);
-        else if (c == '{') {
+
+    /* Process the string, expanding parameters as they are encountered */
+    while (param_t) {
+        /* Replace parameter with vale of the associated environment variable */
+        if (param_t == '!') build_str(getenvstr("!"), NULL);
+        else if (param_t == '$') build_str(getenvstr("$"), NULL);
+        else if (param_t == '?') build_str(getenvstr("?"), NULL);
+        else if (param_t == '{') {
             const size_t param_len = end - start - 3;
             char param[param_len + 1];
             strncpy(param, start + 2, param_len);
             param[param_len] = '\0';
             build_str(getenvstr(param), NULL);
         }
+
+        /* Search for next parameter */
         pos = end;
-        c = param_scan(pos, &start, &end);
+        param_t = param_scan(pos, &start, &end);
         build_str(pos, start);
     }
+
+    /* Append the remaining characters and return the processed string */
     return build_str(start, NULL);
 }
 
-struct Redirect* checkRedirect(const char* token)
+struct redirect* check_redirect(const char* token)
 {
     /* Determine if the command is a redirect */
-    enum redirect_t type;
+    enum rd_t type;
     if (strcmp(token, "<") == 0) type = IN;
     else if (strcmp(token, ">") == 0)  type = OUT;
     else if (strcmp(token, ">>") == 0) type = APPEND;
     else return NULL;
 
     /* Allocate a struct for the redirect and return */
-    struct Redirect* temp_rd = malloc(sizeof(struct Redirect));
+    struct redirect* temp_rd = malloc(sizeof(struct redirect));
     temp_rd->type = type;
     temp_rd->destination = NULL;
     return temp_rd;
 }
 
-struct Command parseCommand(char** tokens, size_t numTokens)
+struct command parse_command(char** tokens, const size_t n_tokens)
 {
     /* Initialize command struct */
-    struct Command cmd = {
+    struct command cmd = {
         EXTERNAL,
         NULL,
-        malloc(sizeof(char*) * (numTokens + 1)),
+        malloc(sizeof(char*) * (n_tokens + 1)),
         0,
         NULL,
         0,
@@ -143,25 +172,25 @@ struct Command parseCommand(char** tokens, size_t numTokens)
     if(!cmd.argv) err(1, "malloc");
 
     /* Check if last token is "&" for background process indicatior */
-    int numToParse = numTokens;
-    if (strcmp(tokens[numToParse - 1], "&") == 0) {
+    int n_args = n_tokens;
+    if (strcmp(tokens[n_args - 1], "&") == 0) {
         cmd.background = true;
-        --numToParse;
+        --n_args;
     }
 
     /* Iterate through tokens to parse command arguments */
-    for (int i = 0; i < numToParse; ++i)
+    for (int i = 0; i < n_args; ++i)
     {
         /* Handle redirection */
-        struct Redirect* rd_ptr = checkRedirect(tokens[i]);
-        if (rd_ptr && cmd.cmd_t == EXTERNAL) {
+        struct redirect* rd_ptr = check_redirect(tokens[i]);
+        if (rd_ptr && cmd.type == EXTERNAL) {
             ++i;                            // Skip the redirection operator
-            if (i >= numTokens) {           // Return if operator is the last token
+            if (i >= n_tokens) {           // Return if operator is the last token
                 free(rd_ptr);
                 return cmd;
             }
             rd_ptr->destination = tokens[i];
-            cmd.redirects = realloc(cmd.redirects, sizeof(struct Redirect*) * (cmd.rd_count + 1));
+            cmd.redirects = realloc(cmd.redirects, sizeof(struct redirect*) * (cmd.rd_count + 1));
             cmd.redirects[cmd.rd_count] = rd_ptr;
             ++cmd.rd_count;
         }
@@ -170,8 +199,8 @@ struct Command parseCommand(char** tokens, size_t numTokens)
             /* Assign command name and check for built-in commands */
             if (cmd.name == NULL) {
                 cmd.name = tokens[i];
-                if (strcmp(cmd.name, "cd") == 0) cmd.cmd_t = CD;
-                else if (strcmp(cmd.name, "exit") == 0) cmd.cmd_t = EXIT;
+                if (strcmp(cmd.name, "cd") == 0) cmd.type = CD;
+                else if (strcmp(cmd.name, "exit") == 0) cmd.type = EXIT;
             }
             cmd.argv[cmd.argc] = tokens[i];
             ++cmd.argc;

@@ -4,7 +4,7 @@
  * from lines of input, including tokenizing, parameter expansion, and
  * generating command structures from tokenized input
  *
- * Starter code provided by OSU Instructor for functions: wordsplit(), param_scan()
+ * Starter code provided by OSU Instructor for functions: tokenize(), param_scan()
  * build_str(), and expand().
  */
 
@@ -15,8 +15,9 @@
 #define _GNU_SOURCE
 #endif
 
-#ifndef MAX_WORDS
-#define MAX_WORDS 512
+// Maximum level of tokenized arguments allowed
+#ifndef MAX_ARGS
+#define MAX_ARGS 512
 #endif
 
 #include <signal.h>
@@ -29,38 +30,38 @@
 #include "environment.h"
 #include "command.h"
 
-/* Splits a string into words delimited by whitespace. Recognizes
+/* Splits a string into tokens delimited by whitespace. Recognizes
  * comments as '#' at the beginning of a word, and backslash escapes.
  *
- * Returns number of words parsed, and updates the words[] array
- * with pointers to the words, each as an allocated string.
+ * Returns number of arguments parsed, and updates the tokens[] array
+ * with pointers to the arguments, each as an allocated string.
  */
-size_t tokenize(char const* line, char** words);
+size_t tokenize(char const* line, char* words[]);
 
 /* Find next instance of a parameter within a word. Sets
  * start and end pointers to the start and end of the parameter
  * token.
  */
-char param_scan(char const *word, char const **start, char const **end);
+char param_scan(char const* word, char const** start, char const** end);
 
 /* Simple string-builder function. Builds up a base
  * string by appending supplied strings/character ranges
  * to it.
  */
-char* build_str(char const *start, char const *end);
+char* build_str(char const* start, char const* end);
 
 /* Expands all instances of $! $$ $? and ${param} in a string
  * Returns a newly allocated string that the caller must free
  */
-char* expand(char const *word);
+char* expand(char const* word);
 
 /* Checks if a token is a redirect operator.
- * If yes, returns a pointer to a Redirect struct of the appropriate type,
+ * If yes, returns a pointer to a Redirect struct with the appropriate type,
  * otherwise returns NULL
  */
-struct Redirect* checkRedirect(const char* token);
+struct redirect* check_redirect(const char* token);
 
 /* Parses an array of tokenized strings and returns a Command struct */
-struct Command parseCommand(char** tokens, size_t numTokens);
+struct command parse_command(char** tokens, size_t n_tokens);
 
 #endif //SMALLSH_PARSER_H
