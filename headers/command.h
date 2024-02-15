@@ -75,9 +75,6 @@ void cmd_exit(char** argv, const int argc);
 /* Handles process forking for external commands */
 void cmd_external(struct Command cmd, struct sigaction** dispositions);
 
-/* Sends a SIGCONT signal to a stopped child and prints a notice of this action to stderror */
-void continue_child(pid_t pid);
-
 /* Executes a program based on a passed-in command */
 void execute(struct Command cmd);
 
