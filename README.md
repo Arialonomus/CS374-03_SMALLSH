@@ -1,0 +1,1 @@
+A small but functional shell program created for Oregon State University's CS 374 "Operating Systems I" course. Program parses user entered strings into commands, which it executes. SMALLSH implements built-in commands "exit" and "cd" and utilizes execv() functionality to launch all external commands.
